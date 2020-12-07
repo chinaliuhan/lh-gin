@@ -2,46 +2,68 @@ package utils
 
 import (
 	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"log"
 )
 
+type SessionOptions struct {
+	sessions.Options
+}
+
 type SessionUtil struct {
-	SessionManager sessions.Session
-	cookie         cookie.Store
+	handler sessions.Session
 }
 
 //var globalSessions *session.Manager
-
 func NewSessionUtil(ctx *gin.Context) *SessionUtil {
-
-	sessionHandler := sessions.Default(ctx)
-	sessionHandler.Set("name", "liuhao")
-
-	err := sessionHandler.Save()
-	if err != nil {
+	handler := sessions.Default(ctx)
+	if handler == nil {
 		log.Println("session保存失败")
 	}
 
-	//store := cookie.NewStore([]byte(cookieKey))
-
 	return &SessionUtil{
 
-		SessionManager: sessionHandler,
+		handler: handler,
 	}
 }
 
-func (receiver SessionUtil) GetAll() (string, error) {
-	return "", nil
+func (r *SessionUtil) GetOne(key string) interface{} {
+	if data := r.handler.Get(key); data != nil {
+		return data
+	}
+
+	return nil
 }
 
-func (receiver SessionUtil) GetOne(key string) (string, error) {
+func (r *SessionUtil) SetOne(key string, value interface{}) error {
+	r.handler.Set(key, value)
+	if err := r.handler.Save(); err != nil {
+		return err
+	}
 
-	return "", nil
+	return nil
 }
 
-func (receiver SessionUtil) SetOne(key string, value string) (string, error) {
+func (r *SessionUtil) Del(key string) error {
+	r.handler.Delete(key)
+	if err := r.handler.Save(); err != nil {
+		return err
+	}
 
-	return "", nil
+	return nil
+}
+
+func (r *SessionUtil) FlushAll() error {
+	r.handler.Clear()
+	if err := r.handler.Save(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *SessionUtil) GetAll() error {
+	//todo 未实现
+
+	return nil
 }

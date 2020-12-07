@@ -16,8 +16,7 @@ type ArticleController struct {
 }
 
 func NewArticleController() *ArticleController {
-	return &ArticleController{
-	}
+	return &ArticleController{}
 }
 
 func (r *ArticleController) Info(ctx *gin.Context) {
@@ -62,7 +61,7 @@ func (r *ArticleController) Add(ctx *gin.Context) {
 	}
 
 	tmp.UserId = bindRequest.UserId
-	tmp.Classify = bindRequest.Classify
+	tmp.ClassifyId = bindRequest.Classify
 	tmp.Title = bindRequest.Title
 	tmp.Content = bindRequest.Content
 

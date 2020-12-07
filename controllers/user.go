@@ -1,10 +1,10 @@
 package controllers
 
 import (
-	"encoding/json"
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"lh-gin/constants"
 	"lh-gin/models"
+	"lh-gin/repositories"
 	"lh-gin/requests"
 	"lh-gin/services"
 	"lh-gin/utils"
@@ -17,8 +17,7 @@ type UserController struct {
 
 func NewUserController() *UserController {
 
-	return &UserController{
-	}
+	return &UserController{}
 }
 
 /**
@@ -98,20 +97,35 @@ func (r *UserController) Login(ctx *gin.Context) {
 	}
 
 	//session
-	session := sessions.Default(ctx)
-	stringInfo, _ := json.Marshal(info)
-	session.Set("loginstatus", stringInfo)
-	err = session.Save()
+	err = utils.NewSessionUtil(ctx).SetOne("user_id", info.Id)
 	if err != nil {
 		utils.NewResponse(ctx).JsonFailed("登录状态维持失败")
 		log.Println(err.Error())
 		return
 	}
 
-	utils.NewResponse(ctx).JsonSuccess(info)
+	utils.NewResponse(ctx).JsonSuccess("")
 	return
 }
 
+/**
+获取登录后的个人信息
+*/
 func (r *UserController) Info(ctx *gin.Context) {
 
+	userID := utils.NewSessionUtil(ctx).GetOne("user_id")
+	//断言, 如果成功,则转换为Int
+	uid, ok := userID.(int)
+	if !ok {
+		utils.NewResponse(ctx).JsonFailed(constants.GetMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+	info, err := repositories.NewUserManagerRepository().GetInfoByID(uid)
+	if err != nil {
+		utils.NewResponse(ctx).JsonFailed(constants.GetMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+
+	utils.NewResponse(ctx).JsonSuccess(info)
+	return
 }

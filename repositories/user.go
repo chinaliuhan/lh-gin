@@ -9,6 +9,7 @@ import (
 type UserRepository interface {
 	AddNew(user models.User) (int64, error)
 	GetInfoByUsername(username string) (models.User, error)
+	GetInfoByID(id int) (models.User, error)
 }
 
 type UserManagerRepository struct {
@@ -36,6 +37,14 @@ func (receiver UserManagerRepository) AddNew(user models.User) (int64, error) {
 func (receiver UserManagerRepository) GetInfoByUsername(username string) (models.User, error) {
 	userModel := models.User{}
 	if ok, err := utils.NewDBMysql().Where("username=?", username).Get(&userModel); !ok {
+		return userModel, err
+	}
+	return userModel, nil
+}
+
+func (receiver UserManagerRepository) GetInfoByID(id int) (models.User, error) {
+	userModel := models.User{}
+	if ok, err := utils.NewDBMysql().Where("id=?", id).Get(&userModel); !ok {
 		return userModel, err
 	}
 	return userModel, nil

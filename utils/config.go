@@ -45,14 +45,14 @@ func NewConfigUtil(fileName string) *configUtil {
 	return cu
 }
 
-func (receiver *configUtil) GetConfig2Struct(title string, myStructPoint *interface{}) *interface{} {
+func (r *configUtil) GetConfig2Struct(title string, myStructPoint *interface{}) *interface{} {
 	//判断配置是否加载成功
-	if receiver.handler == nil {
-		logrus.Infoln("handler不存在,配置文件读取失败:", receiver.path)
+	if r.handler == nil {
+		logrus.Infoln("handler不存在,配置文件读取失败:", r.path)
 		return nil
 	}
 	//将配置文件映射到struct中
-	if err := receiver.handler.Section(title).MapTo(myStructPoint); err != nil {
+	if err := r.handler.Section(title).MapTo(myStructPoint); err != nil {
 		log.Println("映射配置文件失败:", err.Error())
 		return nil
 	}
@@ -68,15 +68,15 @@ type ServerConfig struct {
 	Port    int
 }
 
-func (receiver *configUtil) GetServerConfig(title string) *ServerConfig {
+func (r *configUtil) GetServerConfig(title string) *ServerConfig {
 	//判断配置是否加载成功
-	if receiver.handler == nil {
-		log.Println("handler不存在,配置文件读取失败:", receiver.path)
+	if r.handler == nil {
+		log.Println("handler不存在,配置文件读取失败:", r.path)
 		return nil
 	}
 	//将配置文件映射到struct中
 	sc := &ServerConfig{}
-	if err := receiver.handler.Section(title).MapTo(sc); err != nil {
+	if err := r.handler.Section(title).MapTo(sc); err != nil {
 		log.Println("映射配置文件失败:", err.Error())
 		return nil
 	}
@@ -101,17 +101,42 @@ type DbConfig struct {
 }
 
 //dsName = "root:root@(127.0.0.1:3306)/lh-moon?charset=utf8"
-func (receiver *configUtil) GetDbConfig(title string) *DbConfig {
+func (r *configUtil) GetDbConfig(title string) *DbConfig {
 	//判断配置是否加载成功
-	if receiver.handler == nil {
-		log.Println("handler不存在,配置文件读取失败:", receiver.path)
+	if r.handler == nil {
+		log.Println("handler不存在,配置文件读取失败:", r.path)
 		return nil
 	}
 	dc := &DbConfig{}
-	if err := receiver.handler.Section(title).MapTo(dc); err != nil {
+	if err := r.handler.Section(title).MapTo(dc); err != nil {
 		log.Println("映射配置文件失败:", err.Error())
 		return nil
 	}
 
 	return dc
+}
+
+type Session struct {
+	SaveType   string
+	SessionKey string
+	Path       string
+	Domain     string
+	MaxAge     int
+	Secure     bool
+	HttpOnly   bool
+}
+
+func (r *configUtil) GetCookieConfig(title string) *Session {
+	//判断配置是否加载成功
+	if r.handler == nil {
+		log.Println("handler不存在,配置文件读取失败:", r.path)
+		return nil
+	}
+	s := &Session{}
+	if err := r.handler.Section(title).MapTo(s); err != nil {
+		log.Println("映射配置文件失败:", err.Error())
+		return nil
+	}
+
+	return s
 }
