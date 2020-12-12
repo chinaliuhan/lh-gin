@@ -61,7 +61,7 @@ func (r *ArticleController) Add(ctx *gin.Context) {
 	}
 
 	tmp.UserId = bindRequest.UserId
-	tmp.ClassifyId = bindRequest.Classify
+	tmp.Classify = bindRequest.Classify
 	tmp.Title = bindRequest.Title
 	tmp.Content = bindRequest.Content
 
