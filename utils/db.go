@@ -7,22 +7,160 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 	"xorm.io/xorm"
 )
 
-//type DBMysqlUtil struct {
-//	Model  struct{}
-//	Engine *xorm.Engine
-//}
+//继承xorm
+type mysqlInstance struct {
+	*xorm.Engine
+}
+
+//连接缓存
+var instance map[string]*mysqlInstance
 
 //sync.Once能确保实例化对象Do方法在多线程环境只运行一次,内部通过互斥锁实现,它的内部本质上也是双重检查的方式
+var lockOnce sync.Once
+
+/**
+通过可扩展单例获取MySQL连接
+第一个参数为: Section name 必填
+第二个参数为: file name  app.ini 可选
+第三个参数为: folder name /home/liuhao/go/src/lh-gin/conf 可选
+*/
+func NewMysqlInstance(params ...string) *mysqlInstance {
+	log.Println("获取可变参数的长度", len(params))
+
+	lockOnce.Do(func() {
+		//params... 会将参数打散,逐个传入
+		instance[params[0]] = NewDBMysqlUtil(params...).GetConnect()
+	})
+
+	return instance[params[0]]
+}
+
+type DBMysqlUtil struct {
+	sectionName string
+	fileName    string
+	folderName  string
+	dbConfig    *DbConfig
+}
+
+/**
+直接获取MySQL连接
+第一个参数为: Section name 必填
+第二个参数为: file name  app.ini 可选
+第三个参数为: folder name /home/liuhao/go/src/lh-gin/conf 可选
+*/
+func NewDBMysqlUtil(params ...string) *DBMysqlUtil {
+
+	//参数多的时候最好在顶层初始化
+	var (
+		err      error
+		filename string
+		folder   string
+		section  string
+	)
+
+	//同时指定了section, filename folder
+	if len(params) > 2 {
+		section = params[0]
+		filename = params[1]
+		folder = params[2]
+
+	} else if len(params) > 1 {
+		//仅指定了section filename
+		section = params[0]
+		filename = params[1]
+
+	} else {
+		if len(params) > 0 {
+			//仅仅指定了section
+			section = params[0]
+
+		} else {
+			//未指定任何参数,采用默认值
+			section = "mysql"
+		}
+
+		//自动识别配置文件
+		folder = NewCommon().Pwd() + "/conf/"
+		_, err = os.Stat(folder + "db.ini")
+		if os.IsNotExist(err) {
+			filename = "db.ini"
+		} else {
+			filename = "app.ini"
+		}
+	}
+	logrus.Println(filename, folder)
+
+	//初始化MySQL数据库
+	configHandler := NewConfigUtil(filename, folder)
+	if configHandler == nil {
+		log.Println("读取MySQL配置文件失败")
+		return nil
+	}
+	dbConfig := configHandler.GetDbConfig(section)
+	log.Println("db config: ", NewJsonUtils().Encode(dbConfig))
+
+	return &DBMysqlUtil{
+		sectionName: section,
+		fileName:    filename,
+		folderName:  folder,
+		dbConfig:    dbConfig,
+	}
+
+}
+
+func (r *DBMysqlUtil) GetConnect() *mysqlInstance {
+	//参数多的时候最好在顶层初始化
+	var (
+		dsn        string
+		err        error
+		ormHandler *xorm.Engine
+	)
+	//dsName = "root:root@(127.0.0.1:3306)/lh-moon?charset=utf8"
+	dsn = fmt.Sprintf(
+		"%s:%s@(%s:%s)/%s?charset=%s",
+		r.dbConfig.User, r.dbConfig.Password, r.dbConfig.Host, r.dbConfig.Port, r.dbConfig.Database, r.dbConfig.Charset,
+	)
+	log.Println("DB dsn: ", dsn)
+
+	//这里的err比较特殊,最好处理一下 err.Error()的错误信息,防止出现意外
+	ormHandler, err = xorm.NewEngine(r.dbConfig.Db, dsn)
+	if err != nil && err.Error() != "" {
+		log.Println("xorm NewEngine 初始化失败:", err.Error())
+		return nil
+	}
+	if ormHandler == nil {
+		log.Println("xorm NewEngine engine 初始化失败: engine 为 nil")
+		return nil
+	}
+
+	//数据库最大打开的连接数
+	maxConn, _ := strconv.ParseInt(r.dbConfig.MaxConn, 10, 0)
+	if maxConn > 0 {
+		maxConn, _ := strconv.ParseInt(r.dbConfig.MaxConn, 10, 0)
+		ormHandler.SetMaxOpenConns(int(maxConn))
+		log.Println("设置最大连接数:", maxConn)
+	}
+
+	//是否显示SQL语句
+	isShowSql, _ := strconv.ParseBool(r.dbConfig.IsShowSql)
+	if isShowSql {
+		ormHandler.ShowSQL(true)
+		log.Println("开启SQL打印")
+	}
+
+	return &mysqlInstance{ormHandler}
+}
 
 var xormEngine *xorm.Engine
 
 /**
 第一个参数为: Section name
 第二个参数为: file name  app.ini
-第三个参数为: folder name /home/liuhao/go/src/lh-gin/conf/
+第三个参数为: folder name /home/liuhao/go/src/lh-gin/conf
 */
 func NewDBMysql(params ...string) *xorm.Engine {
 	log.Println("获取可变参数的长度", len(params))
