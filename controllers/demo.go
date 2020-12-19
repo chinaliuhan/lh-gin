@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"lh-gin/utils"
+	"lh-gin/tools"
 	"net/http"
 )
 
@@ -24,7 +24,7 @@ func SetSession(ctx *gin.Context) {
 }
 func GetSession(ctx *gin.Context) {
 
-	utils.NewDBMysql()
+	tools.NewMysqlInstance()
 
 	key := ctx.Query("key")
 

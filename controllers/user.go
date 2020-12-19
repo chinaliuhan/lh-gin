@@ -7,7 +7,7 @@ import (
 	"lh-gin/repositories"
 	"lh-gin/requests"
 	"lh-gin/services"
-	"lh-gin/utils"
+	"lh-gin/tools"
 	"log"
 )
 
@@ -41,7 +41,7 @@ func (r *UserController) Register(ctx *gin.Context) {
 	err = ctx.ShouldBind(&requestRegister) ////与c.Bind（）类似，但是此方法未将响应状态代码设置为400，并且如果json无效，则中止。
 	if err != nil {
 		log.Println(err.Error())
-		utils.NewResponse(ctx).JsonFailed("参数错误")
+		tools.NewResponse(ctx).JsonFailed("参数错误")
 		return
 	}
 
@@ -56,10 +56,10 @@ func (r *UserController) Register(ctx *gin.Context) {
 	lastId, err = services.NewUserService().AddNew(tmp)
 	if err != nil {
 		log.Println(err.Error())
-		utils.NewResponse(ctx).JsonFailed("注册失败")
+		tools.NewResponse(ctx).JsonFailed("注册失败")
 		return
 	}
-	utils.NewResponse(ctx).JsonSuccess(lastId)
+	tools.NewResponse(ctx).JsonSuccess(lastId)
 	return
 }
 
@@ -80,7 +80,7 @@ func (r *UserController) Login(ctx *gin.Context) {
 	//payload on json
 	if err = ctx.ShouldBindJSON(&loginRequest); err != nil {
 		log.Println(err.Error())
-		utils.NewResponse(ctx).JsonFailed("参数错误")
+		tools.NewResponse(ctx).JsonFailed("参数错误")
 		return
 	}
 
@@ -88,14 +88,14 @@ func (r *UserController) Login(ctx *gin.Context) {
 	info, serviceCode = services.NewUserService().GetLogin(loginRequest)
 	if serviceCode == constants.SERVICE_SUCCESS {
 		//session
-		err = utils.NewSessionUtil(ctx).SetOne("user_id", info.Id)
+		err = tools.NewSessionUtil(ctx).SetOne("user_id", info.Id)
 		if err != nil {
-			utils.NewResponse(ctx).JsonFailed("登录状态维持失败")
+			tools.NewResponse(ctx).JsonFailed("登录状态维持失败")
 			log.Println(err.Error())
 			return
 		}
 
-		utils.NewResponse(ctx).JsonSuccess("")
+		tools.NewResponse(ctx).JsonSuccess("")
 		return
 	}
 	switch serviceCode {
@@ -109,11 +109,11 @@ func (r *UserController) Login(ctx *gin.Context) {
 		log.Println("登录失败:", serviceCode)
 		fallthrough
 	case constants.SERVICE_PASSWORD_ERROR:
-		utils.NewResponse(ctx).JsonFailed("账号密码错误")
+		tools.NewResponse(ctx).JsonFailed("账号密码错误")
 		return
 	default:
 		log.Println("登录失败: 未捕捉到service code")
-		utils.NewResponse(ctx).JsonFailed("系统繁忙请稍后重试")
+		tools.NewResponse(ctx).JsonFailed("系统繁忙请稍后重试")
 		return
 	}
 }
@@ -123,31 +123,31 @@ func (r *UserController) Login(ctx *gin.Context) {
 */
 func (r UserController) GaSecret(ctx *gin.Context) {
 
-	userID := utils.NewSessionUtil(ctx).GetOne("user_id")
+	userID := tools.NewSessionUtil(ctx).GetOne("user_id")
 	//断言, 如果成功,则转换为Int
 	uid, ok := userID.(int)
 	if !ok {
-		utils.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
 		return
 	}
 	info, err := repositories.NewUserManagerRepository().GetInfoByID(uid)
 	if err != nil || info.Id <= 0 {
-		utils.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
 		return
 	}
 
-	gaSecret := utils.NewGoogleAuth().GetSecret()
+	gaSecret := tools.NewGoogleAuth().GetSecret()
 	data := gin.H{"ga_secret": gaSecret, "name": info.Username}
-	utils.NewResponse(ctx).JsonSuccess(data)
+	tools.NewResponse(ctx).JsonSuccess(data)
 }
 
 /**
 获取带用户信息的GA
 */
 func (r UserController) GaSecretQrcode(ctx *gin.Context) {
-	gaSecret := utils.NewGoogleAuth().GetSecret()
-	gaSecretQrcode := utils.NewGoogleAuth().GetQrcode("hahah", gaSecret)
-	utils.NewResponse(ctx).JsonSuccess(gaSecretQrcode)
+	gaSecret := tools.NewGoogleAuth().GetSecret()
+	gaSecretQrcode := tools.NewGoogleAuth().GetQrcode("hahah", gaSecret)
+	tools.NewResponse(ctx).JsonSuccess(gaSecretQrcode)
 }
 
 /**
@@ -155,7 +155,7 @@ func (r UserController) GaSecretQrcode(ctx *gin.Context) {
 */
 func (r UserController) GaBind(ctx *gin.Context) {
 
-	utils.NewResponse(ctx).JsonSuccess("")
+	tools.NewResponse(ctx).JsonSuccess("")
 }
 
 /**
@@ -163,20 +163,20 @@ func (r UserController) GaBind(ctx *gin.Context) {
 */
 func (r *UserController) Info(ctx *gin.Context) {
 
-	userID := utils.NewSessionUtil(ctx).GetOne("user_id")
+	userID := tools.NewSessionUtil(ctx).GetOne("user_id")
 	//断言, 如果成功,则转换为Int
 	uid, ok := userID.(int)
 	if !ok {
-		utils.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
 		return
 	}
 	info, err := repositories.NewUserManagerRepository().GetInfoByID(uid)
 	if err != nil {
-		utils.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
 		return
 	}
 
-	utils.NewResponse(ctx).JsonSuccess(info)
+	tools.NewResponse(ctx).JsonSuccess(info)
 	return
 }
 

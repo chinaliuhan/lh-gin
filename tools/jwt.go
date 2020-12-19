@@ -1,4 +1,4 @@
-package utils
+package tools
 
 type JwtUtil struct {
 }

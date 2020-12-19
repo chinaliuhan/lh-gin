@@ -5,7 +5,7 @@ import (
 	"lh-gin/models"
 	"lh-gin/requests"
 	"lh-gin/services"
-	"lh-gin/utils"
+	"lh-gin/tools"
 	"log"
 	"strconv"
 	"time"
@@ -30,11 +30,11 @@ func (r *ArticleController) Info(ctx *gin.Context) {
 	uid, err = strconv.Atoi(string(uid))
 	if err != nil {
 		log.Println("类型转换出错")
-		utils.NewResponse(ctx).JsonFailed("参数错误")
+		tools.NewResponse(ctx).JsonFailed("参数错误")
 	}
 
 	info, _ = services.NewArticleService().GetInfoByUid(int(uid))
-	utils.NewResponse(ctx).JsonSuccess(info)
+	tools.NewResponse(ctx).JsonSuccess(info)
 }
 
 func (r *ArticleController) Add(ctx *gin.Context) {
@@ -56,7 +56,7 @@ func (r *ArticleController) Add(ctx *gin.Context) {
 	err = ctx.ShouldBind(&bindRequest) ////与c.Bind（）类似，但是此方法未将响应状态代码设置为400，并且如果json无效，则中止。
 	if err != nil {
 		log.Println(err.Error())
-		utils.NewResponse(ctx).JsonFailed("参数错误")
+		tools.NewResponse(ctx).JsonFailed("参数错误")
 		return
 	}
 
@@ -69,10 +69,10 @@ func (r *ArticleController) Add(ctx *gin.Context) {
 	lastId, err = services.NewArticleService().AddNew(tmp)
 	if err != nil {
 		log.Println(err.Error())
-		utils.NewResponse(ctx).JsonFailed("添加失败")
+		tools.NewResponse(ctx).JsonFailed("添加失败")
 		return
 	}
-	utils.NewResponse(ctx).JsonSuccess(lastId)
+	tools.NewResponse(ctx).JsonSuccess(lastId)
 	return
 }
 

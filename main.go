@@ -8,7 +8,7 @@ import (
 	"lh-gin/middlewares"
 	"lh-gin/models"
 	"lh-gin/routers"
-	"lh-gin/utils"
+	"lh-gin/tools"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 	*/
 	var (
 		err          error
-		serverConfig *utils.ServerConfig
+		serverConfig *tools.ServerConfig
 	)
 
 	/**
@@ -41,22 +41,22 @@ func main() {
 	/**
 	读取服务器配置文件
 	*/
-	serverConfig = utils.NewConfigUtil("app.ini").GetServerConfig("server")
-	logrus.Infoln("server config: ", utils.NewJsonUtils().Encode(serverConfig))
+	serverConfig = tools.NewConfigUtil("app.ini").GetServerConfig("server")
+	logrus.Infoln("server config: ", tools.NewJsonUtil().Encode(serverConfig))
 
-	dc := utils.NewConfigUtil("db.ini").GetDbConfig("mysql")
-	logrus.Infoln("db.ini config: ", utils.NewJsonUtils().Encode(dc))
+	dc := tools.NewConfigUtil("db.ini").GetDbConfig("mysql")
+	logrus.Infoln("db.ini config: ", tools.NewJsonUtil().Encode(dc))
 
 	/**
 	静态资源
 	*/
-	staticPath := utils.NewCommon().Pwd() + "/public/static"
+	staticPath := tools.NewCommon().Pwd() + "/public/static"
 	engine.Static("/static", staticPath)
-	assetsPath := utils.NewCommon().Pwd() + "/public/assets"
+	assetsPath := tools.NewCommon().Pwd() + "/public/assets"
 	engine.Static("/assets", assetsPath)
 
 	//为单个静态资源文件，绑定url
-	favicon := utils.NewCommon().Pwd() + "/public/assets/images/favicon.ico"
+	favicon := tools.NewCommon().Pwd() + "/public/assets/images/favicon.ico"
 	engine.StaticFile("/favicon.ico", favicon)
 
 	/**
@@ -71,9 +71,9 @@ func main() {
 
 func init() {
 	//同步表结构到MySQL todo
-	_ = utils.NewDBMysql("mysql")
-	_ = utils.SyncTable(new(models.User))
-	_ = utils.SyncTable(new(models.UserInfo))
-	_ = utils.SyncTable(new(models.ArticleClassify))
-	_ = utils.SyncTable(new(models.ArticleContent))
+	_, _ = tools.NewMysqlInstance().QueryString("select * from user limit 100")
+	_ = tools.NewMysqlInstance().Sync2(new(models.User))
+	_ = tools.NewMysqlInstance().Sync2(new(models.UserInfo))
+	_ = tools.NewMysqlInstance().Sync2(new(models.ArticleClassify))
+	_ = tools.NewMysqlInstance().Sync2(new(models.ArticleContent))
 }

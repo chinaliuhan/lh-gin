@@ -3,7 +3,7 @@ package repositories
 import (
 	"database/sql"
 	"lh-gin/models"
-	"lh-gin/utils"
+	"lh-gin/tools"
 	"log"
 )
 
@@ -30,7 +30,7 @@ func (o *ArticleManagerRepository) AddNew(article models.ArticleContent) (int64,
 	)
 
 	// insert db
-	lastID, err = utils.NewDBMysql().InsertOne(article)
+	lastID, err = tools.NewMysqlInstance().InsertOne(article)
 	if err != nil {
 		log.Println("插入失败: ", err.Error())
 		return 0, err
@@ -41,7 +41,7 @@ func (o *ArticleManagerRepository) AddNew(article models.ArticleContent) (int64,
 
 func (o *ArticleManagerRepository) GetInfoByUid(uid int) (models.ArticleContent, error) {
 	tmp := models.ArticleContent{}
-	if ok, err := utils.NewDBMysql().Where("user_id=?", uid).Get(&tmp); !ok {
+	if ok, err := tools.NewMysqlInstance().Where("user_id=?", uid).Get(&tmp); !ok {
 		return tmp, err
 	}
 	return tmp, nil

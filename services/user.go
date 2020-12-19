@@ -5,7 +5,7 @@ import (
 	"lh-gin/models"
 	"lh-gin/repositories"
 	"lh-gin/requests"
-	"lh-gin/utils"
+	"lh-gin/tools"
 )
 
 type UserService struct {
@@ -41,7 +41,7 @@ func (this UserService) GetLogin(params requests.LoginRequest) (models.User, int
 	}
 
 	//validate password
-	if utils.NewGenerate().GenerateMd5(params.Password) == info.Password {
+	if tools.NewGenerate().GenerateMd5(params.Password) == info.Password {
 		return models.User{}, constants.SERVICE_PASSWORD_ERROR
 	}
 

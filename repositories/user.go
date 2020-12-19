@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"lh-gin/models"
-	"lh-gin/utils"
+	"lh-gin/tools"
 	"log"
 )
 
@@ -25,7 +25,7 @@ func (receiver UserManagerRepository) AddNew(user models.User) (int64, error) {
 	)
 
 	// insert db
-	lastID, err = utils.NewDBMysql().InsertOne(user)
+	lastID, err = tools.NewMysqlInstance().InsertOne(user)
 	if err != nil {
 		log.Println("插入失败: ", err.Error())
 		return 0, err
@@ -36,7 +36,7 @@ func (receiver UserManagerRepository) AddNew(user models.User) (int64, error) {
 
 func (receiver UserManagerRepository) GetInfoByUsername(username string) (models.User, error) {
 	userModel := models.User{}
-	if ok, err := utils.NewDBMysql().Where("username=?", username).Get(&userModel); !ok {
+	if ok, err := tools.NewMysqlInstance().Where("username=?", username).Get(&userModel); !ok {
 		return userModel, err
 	}
 	return userModel, nil
@@ -44,7 +44,7 @@ func (receiver UserManagerRepository) GetInfoByUsername(username string) (models
 
 func (receiver UserManagerRepository) GetInfoByID(id int) (models.User, error) {
 	userModel := models.User{}
-	if ok, err := utils.NewDBMysql().Where("id=?", id).Get(&userModel); !ok {
+	if ok, err := tools.NewMysqlInstance().Where("id=?", id).Get(&userModel); !ok {
 		return userModel, err
 	}
 	return userModel, nil

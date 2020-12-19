@@ -5,7 +5,7 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"lh-gin/controllers"
-	"lh-gin/utils"
+	"lh-gin/tools"
 )
 
 /**
@@ -15,7 +15,7 @@ import (
 func UserRouters(engine *gin.Engine) *gin.RouterGroup {
 	//注册session中间件
 	store := cookie.NewStore([]byte("secret"))
-	SessionConfig := utils.NewConfigUtil("app.ini").GetCookieConfig("session")
+	SessionConfig := tools.NewConfigUtil("app.ini").GetCookieConfig("session")
 	engine.Use(sessions.Sessions(SessionConfig.SessionKey, store))
 
 	//绑定路由
@@ -45,7 +45,7 @@ func ArticleRouters(engine *gin.Engine) *gin.RouterGroup {
 
 	//注册session中间件
 	store := cookie.NewStore([]byte("secret"))
-	SessionConfig := utils.NewConfigUtil("app.ini").GetCookieConfig("session")
+	SessionConfig := tools.NewConfigUtil("app.ini").GetCookieConfig("session")
 	engine.Use(sessions.Sessions(SessionConfig.SessionKey, store))
 
 	//绑定路由
@@ -72,7 +72,7 @@ func DemoRouters(engine *gin.Engine) *gin.RouterGroup {
 
 	//注册session中间件
 	store := cookie.NewStore([]byte("secret"))
-	SessionConfig := utils.NewConfigUtil("app.ini").GetCookieConfig("session")
+	SessionConfig := tools.NewConfigUtil("app.ini").GetCookieConfig("session")
 	engine.Use(sessions.Sessions(SessionConfig.SessionKey, store))
 
 	//路由组
