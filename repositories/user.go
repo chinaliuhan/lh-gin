@@ -10,6 +10,7 @@ type UserRepository interface {
 	AddNew(user models.User) (int64, error)
 	GetInfoByUsername(username string) (models.User, error)
 	GetInfoByID(id int) (models.User, error)
+	ModifyByID(id int, user models.User) (int64, error)
 }
 
 type UserManagerRepository struct {
@@ -48,4 +49,14 @@ func (receiver UserManagerRepository) GetInfoByID(id int) (models.User, error) {
 		return userModel, err
 	}
 	return userModel, nil
+}
+
+func (receiver UserManagerRepository) ModifyByID(id int, fields models.User) (int64, error) {
+	rowCount, err := tools.NewMysqlInstance().Where("id=?", id).Update(fields)
+	if rowCount <= 0 || err != nil {
+		tools.NewLogUtil().Warning("修改用户数据失败:", err)
+		return rowCount, err
+	}
+
+	return rowCount, nil
 }

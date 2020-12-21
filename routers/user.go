@@ -32,7 +32,8 @@ func UserRouters(engine *gin.Engine) *gin.RouterGroup {
 		//GA
 		engineHandler.GET("generateGa", controllerHandler.GaSecret)
 		engineHandler.GET("generateGaQrcode", controllerHandler.GaSecretQrcode)
-		engineHandler.GET("gaBind", controllerHandler.GaBind)
+		engineHandler.POST("gaBind", controllerHandler.GaBind)
+		engineHandler.POST("gaUnbind", controllerHandler.GaUnbind)
 	}
 
 	return engineHandler

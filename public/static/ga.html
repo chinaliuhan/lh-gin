@@ -20,18 +20,13 @@
 <div class="login layui-anim layui-anim-up">
     <div class="message">Google Auth</div>
     <div id="darkbannerwrap"></div>
-
     <form method="post" class="layui-form">
-        <!--
-        <input name="username" placeholder="用户名" type="text" lay-verify="required|phone|number|email" class="layui-input">
-        <hr class="hr15">
-        -->
         <div id="qrcode"></div>
-        <input name="secret" lay-verify="required" placeholder="Secret" type="text" class="layui-input">
+        <input name="ga_secret" lay-verify="required" placeholder="Secret" type="text" class="layui-input">
         <hr class="hr15">
         <input name="ga_code" lay-verify="required" placeholder="GA" type="text" class="layui-input">
         <hr class="hr15">
-        <input value="登录" lay-submit lay-filter="login" style="width:100%;" type="button">
+        <input value="保存" lay-submit lay-filter="login" style="width:100%;" type="button">
         <hr class="hr20">
     </form>
 </div>
@@ -39,17 +34,13 @@
 <script src="/assets/js/common.js?v=0.0.11"></script>
 <script>
     $(function () {
-        // common.getJson("/user/generateGaQrcode", function (r) {
-        //     console.log(r)
-        //     common.generateGAQrcode("qrcode", r.data)
-        // })
-        common.getJson("/user/generateGa", function (r) {
+        common.getJson(URL_GA_GENERATE, function (r) {
             console.log(r)
             if (r.code !== CODE_SUCCESS) {
                 layer.msg("生成GA私钥失败")
                 return
             }
-            $("input[name='secret']").val(r.data.ga_secret)
+            $("input[name='ga_secret']").val(r.data.ga_secret)
             common.generateGAQrcode("qrcode", r.data.name, r.data.ga_secret)
         })
 
@@ -57,7 +48,17 @@
             let form = layui.form;
             //监听提交
             form.on('submit(login)', function (data) {
-
+                console.log(URL_GA_BIND, JSON.stringify(data.field))
+                common.post2Payload(URL_GA_BIND, JSON.stringify(data.field), function (r) {
+                    if (r.code !== CODE_SUCCESS) {
+                        console.log(r.code, r.message, status)
+                        layer.msg("绑定失败 " + r.message)
+                        return
+                    }
+                    layer.msg("绑定成功", function () {
+                        location.href = 'index.html'
+                    });
+                })
             })
         });
     })

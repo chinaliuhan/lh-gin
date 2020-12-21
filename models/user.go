@@ -10,7 +10,7 @@ type User struct {
 	AppleKey    string `xorm:"not null default '' comment('苹果ID') VARCHAR(255)"`
 	Nickname    string `xorm:"not null default '' comment('昵称') CHAR(12)"`
 	Password    string `xorm:"not null default '' comment('登录密码') CHAR(32)"`
-	Ga          string `xorm:"not null default '' comment('GA') CHAR(64)"`
+	GaSecret    string `xorm:"not null default '' comment('GA') CHAR(64)"`
 	LoginStatus int    `xorm:"not null default 0 comment('登录状态') TINYINT(2)"`
 	Create      int    `xorm:"not null default 0 comment('创建时间') INT(15)"`
 	Updated     int    `xorm:"not null default 0 comment('更新时间') INT(15)"`

@@ -1,8 +1,8 @@
 const URL_LOGIN = "/user/login"
 const URL_REGISTER = "/user/register"
-const URL_GENERATE_GA = "/user/generateGa"
-const URL_GENERATE_GA_QRCODE = "/user/generateGaQrcode"
-const URL_GENERATE_GA_BIND = "/user/gaBind"
+const URL_GA_GENERATE = "/user/generateGa"
+const URL_GA_QRCODE = "/user/generateGaQrcode"
+const URL_GA_BIND = "/user/gaBind"
 
 const CODE_SUCCESS = 0
 const CODE_FAILED = 0

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"lh-gin/constants"
 	"lh-gin/models"
 	"lh-gin/repositories"
@@ -28,8 +29,9 @@ func (r *UserController) Register(ctx *gin.Context) {
 
 	//prepare
 	var (
-		err    error
-		lastId int64
+		err          error
+		lastId       int64
+		hashPassword []byte
 	)
 	var tmp = models.User{}
 	tmp.CreatedIp = ctx.ClientIP()
@@ -49,6 +51,8 @@ func (r *UserController) Register(ctx *gin.Context) {
 	tmp.Mobile = requestRegister.Mobile
 	tmp.Mobile = requestRegister.Mobile
 	tmp.Email = requestRegister.Email
+	hashPassword, err = bcrypt.GenerateFromPassword([]byte(requestRegister.Password), bcrypt.DefaultCost)
+	tmp.Password = string(hashPassword)
 	//tmp.WechatKey = requestRegister.WechatKey
 	//tmp.AppleKey = requestRegister.AppleKey
 
@@ -155,7 +159,90 @@ func (r UserController) GaSecretQrcode(ctx *gin.Context) {
 */
 func (r UserController) GaBind(ctx *gin.Context) {
 
-	tools.NewResponse(ctx).JsonSuccess("")
+	//prepare
+	var (
+		err           error
+		ok            bool
+		uid           int
+		serviceCode   int
+		sessionData   interface{}
+		gaBindRequest *requests.GaBindRequest
+	)
+
+	//is login
+	sessionData = tools.NewSessionUtil(ctx).GetOne("user_id")
+	//断言, 如果成功,则转换为Int
+	uid, ok = sessionData.(int)
+	if !ok {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+
+	//payload on json
+	gaBindRequest = &requests.GaBindRequest{}
+	if err = ctx.ShouldBindJSON(gaBindRequest); err != nil {
+		tools.NewLogUtil().Error(err)
+		tools.NewResponse(ctx).JsonFailed("参数错误")
+		return
+	}
+
+	ok, serviceCode = services.NewUserService().GaBind(uid, gaBindRequest)
+	if ok && serviceCode == constants.SERVICE_SUCCESS {
+		tools.NewResponse(ctx).JsonSuccess("")
+		return
+	}
+	if ok && serviceCode == constants.SERVICE_GA_WRONG {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_GA_WRONG))
+		return
+	}
+
+	tools.NewLogUtil().Error("绑定GA失败,serviceCode:", serviceCode, err)
+	tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_FAILED))
+	return
+}
+
+func (r UserController) GaUnbind(ctx *gin.Context) {
+
+	//prepare
+	var (
+		err             error
+		ok              bool
+		uid             int
+		serviceCode     int
+		sessionData     interface{}
+		gaUnbindRequest *requests.GaUnbindRequest
+	)
+
+	//is login
+	sessionData = tools.NewSessionUtil(ctx).GetOne("user_id")
+	//断言, 如果成功,则转换为Int
+	uid, ok = sessionData.(int)
+	if !ok {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+
+	//payload on json
+	gaUnbindRequest = &requests.GaUnbindRequest{}
+	if err = ctx.ShouldBindJSON(gaUnbindRequest); err != nil {
+		tools.NewLogUtil().Error(err)
+		tools.NewResponse(ctx).JsonFailed("参数错误")
+		return
+	}
+
+	ok, serviceCode = services.NewUserService().GaUnbind(uid, gaUnbindRequest)
+	if ok && serviceCode == constants.SERVICE_SUCCESS {
+		tools.NewResponse(ctx).JsonSuccess("")
+		return
+	}
+	if ok && serviceCode == constants.SERVICE_GA_WRONG {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_GA_WRONG))
+		return
+	}
+
+	tools.NewLogUtil().Error("解绑GA失败,serviceCode:", serviceCode, err)
+	tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_FAILED))
+	return
 }
 
 /**

@@ -58,6 +58,8 @@ func main() {
 	//为单个静态资源文件，绑定url
 	favicon := tools.NewCommon().Pwd() + "/public/assets/images/favicon.ico"
 	engine.StaticFile("/favicon.ico", favicon)
+	indexHtml := tools.NewCommon().Pwd() + "/public/static/login.html"
+	engine.StaticFile("/", indexHtml)
 
 	/**
 	执行GIN

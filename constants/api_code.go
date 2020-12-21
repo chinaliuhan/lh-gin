@@ -7,6 +7,7 @@ const (
 	API_CODE_LOCK      = 3
 	API_CODE_EXIST     = 1000
 	API_CODE_NO_EXIST  = 1001
+	API_CODE_GA_WRONG  = 1002
 )
 
 func GetApiMsg(code int) string {
@@ -18,6 +19,7 @@ func GetApiMsg(code int) string {
 		API_CODE_LOCK:      "已锁定",
 		API_CODE_EXIST:     "已存在",
 		API_CODE_NO_EXIST:  "不已存在",
+		API_CODE_GA_WRONG:  "GA输入错误",
 	}
 
 	return codeList[code]

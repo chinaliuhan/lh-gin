@@ -22,3 +22,18 @@ type RegisterRequest struct {
 	//WechatKey string `json:"wechat_key" form:"wechat_key"  binding:"alphanum"`
 	//AppleKey  string `json:"apple_key" form:"apple_key"  binding:"alphanum"`
 }
+
+/**
+bind ga
+*/
+type GaBindRequest struct {
+	GaSecret string `json:"ga_secret" form:"ga_secret"  binding:"required,alphanum"` //required 为必须
+	GaCode   string `json:"ga_code" form:"ga_code"  binding:"required,min=1,max=12"`
+}
+
+/**
+bind ga
+*/
+type GaUnbindRequest struct {
+	GaCode string `json:"ga_code" form:"ga_code"  binding:"required,min=1,max=12"`
+}

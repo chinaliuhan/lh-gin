@@ -71,7 +71,7 @@ func (r *GoogleAuth) GetSecret() string {
 }
 
 // 获取动态码
-func (r *GoogleAuth) GetCode(secret string) (string, error) {
+func (r *GoogleAuth) GetCodeBySecret(secret string) (string, error) {
 	secretUpper := strings.ToUpper(secret)
 	secretKey, err := r.base32decode(secretUpper)
 	if err != nil {
@@ -88,10 +88,10 @@ func (r *GoogleAuth) GetQrcode(user, secret string) string {
 
 // 验证动态码
 func (r *GoogleAuth) VerifyCode(secret, code string) (bool, error) {
-	_code, err := r.GetCode(secret)
-	log.Println(_code, code, err)
+	getCode, err := r.GetCodeBySecret(secret)
+	log.Println(getCode, code, err)
 	if err != nil {
 		return false, err
 	}
-	return _code == code, nil
+	return getCode == code, nil
 }
