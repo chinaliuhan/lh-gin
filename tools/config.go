@@ -147,3 +147,26 @@ func (r *ConfigUtil) GetCookieConfig(section string) *Session {
 
 	return s
 }
+
+type RabbitMQ struct {
+	UserName string
+	Password string
+	Host     string
+	Port     int
+	Virtual  string
+}
+
+func (r *ConfigUtil) GetRabbitMQConfig(section string) *RabbitMQ {
+	//判断配置是否加载成功
+	if r.handler == nil {
+		log.Println("handler不存在,配置文件读取失败:", r.path)
+		return nil
+	}
+	s := &RabbitMQ{}
+	if err := r.handler.Section(section).MapTo(s); err != nil {
+		log.Println("映射配置文件失败:", err.Error())
+		return nil
+	}
+
+	return s
+}

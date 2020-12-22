@@ -1,6 +1,6 @@
 package models
 
-type ChatHistory struct {
+type ChatRecord struct {
 	Id        int    `xorm:"not null pk autoincr comment('主键') INT(11)"`
 	UserId    int    `xorm:"not null comment('用户ID') INT(11)"`
 	TargetId  int    `xorm:"not null comment('目标ID') INT(11)"`
@@ -14,6 +14,6 @@ type ChatHistory struct {
 	Deleted   int    `xorm:"not null default 0 comment('删除时间') INT(15)"`
 }
 
-func (m *ChatHistory) TableName() string {
-	return "chat_history"
+func (m *ChatRecord) TableName() string {
+	return "chat_record"
 }
