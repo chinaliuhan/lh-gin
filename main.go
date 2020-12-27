@@ -80,4 +80,5 @@ func init() {
 	_ = tools.NewMysqlInstance().Sync2(new(models.ArticleContent))
 	_ = tools.NewMysqlInstance().Sync2(new(models.ChatCommunity))
 	_ = tools.NewMysqlInstance().Sync2(new(models.ChatContact))
+	_ = tools.NewMysqlInstance().Sync2(new(models.ChatRecord))
 }
