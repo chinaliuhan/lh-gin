@@ -10,7 +10,7 @@ import (
 type ResponseUtil struct {
 	ctx     *gin.Context
 	Code    int         `json:"code"`
-	Message interface{} `json:"message"`
+	Message interface{} `json:"msg"`
 	Data    interface{} `json:"data"`
 }
 

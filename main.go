@@ -24,7 +24,7 @@ func main() {
 	/**
 	启动Gin
 	*/
-	engine := gin.New()
+	engine := gin.Default()
 
 	/**
 	检查cookie - 通过中间件
@@ -34,6 +34,7 @@ func main() {
 	/**
 	自定义路由文件
 	*/
+	routers.ChatRouters(engine)
 	routers.UserRouters(engine)
 	routers.ArticleRouters(engine)
 	routers.DemoRouters(engine)
@@ -50,10 +51,16 @@ func main() {
 	/**
 	静态资源
 	*/
-	staticPath := tools.NewCommon().Pwd() + "/public/static"
-	engine.Static("/static", staticPath)
+	//staticPath := tools.NewCommon().Pwd() + "/public/static"
+	//engine.Static("/static", staticPath)
 	assetsPath := tools.NewCommon().Pwd() + "/public/assets"
 	engine.Static("/assets", assetsPath)
+	engine.Static("/chat/assets/", assetsPath)
+	uploadPath := tools.NewCommon().Pwd() + "/public/upload"
+	engine.Static("/chat/avatar/upload", uploadPath)
+	//**代表目录,*代表文件
+	viewsPath := tools.NewCommon().Pwd() + "/public/views/**/*"
+	engine.LoadHTMLGlob(viewsPath)
 
 	//为单个静态资源文件，绑定url
 	favicon := tools.NewCommon().Pwd() + "/public/assets/images/favicon.ico"

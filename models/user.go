@@ -9,6 +9,10 @@ type User struct {
 	Password    string `xorm:"not null default '' comment('登录密码') CHAR(64)"`
 	GaSecret    string `xorm:"not null default '' comment('GA') CHAR(64)"`
 	LoginStatus int    `xorm:"not null default 0 comment('登录状态') TINYINT(2)"`
+	Avatar      string `xorm:"not null default '' comment('头像') VARCHAR(255)"`
+	Memo        string `xorm:"not null default '' comment('备注') VARCHAR(255)"`
+	Sex         string `xorm:"not null default '0' comment('性别') TINYINT(2)"`
+	Nickname    string `xorm:"not null default '' comment('昵称') CHAR(32)"`
 	Created     int    `xorm:"not null default 0 comment('创建时间') INT(15)"`
 	Updated     int    `xorm:"not null default 0 comment('更新时间') INT(15)"`
 	CreatedIp   string `xorm:"not null default '' comment('创建IP') CHAR(15)"`

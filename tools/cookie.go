@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"errors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,18 +14,20 @@ func NewCookie(ctx *gin.Context) *CookieUtil {
 	}
 }
 
-func (receiver CookieUtil) Get(key string) (string, error) {
-
-	if cookie, err := receiver.ctx.Request.Cookie(key); err != nil {
-		if cookie != nil {
-			return cookie.Value, nil
-		}
+func (r CookieUtil) Get(key string) (string, error) {
+	cookie, err := r.ctx.Cookie(key)
+	if err != nil {
+		return "", err
 	}
 
-	return "", errors.New("未获取到任何cookie")
+	if cookie != "" {
+		return cookie, nil
+	}
+
+	return "", nil
 }
 
-func (receiver CookieUtil) Set(key string, value string) {
+func (r CookieUtil) Set(key string, value string) {
 
-	receiver.ctx.SetCookie(key, value, 3600*1, "/", "", true, true)
+	r.ctx.SetCookie(key, value, 3600*1, "/", "", true, true)
 }

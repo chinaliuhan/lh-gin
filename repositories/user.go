@@ -6,17 +6,10 @@ import (
 	"log"
 )
 
-type UserRepository interface {
-	AddNew(user models.User) (int64, error)
-	GetInfoByUsername(username string) (models.User, error)
-	GetInfoByID(id int) (models.User, error)
-	ModifyByID(id int, user models.User) (int64, error)
-}
-
 type UserManagerRepository struct {
 }
 
-func NewUserManagerRepository() UserRepository {
+func NewUserManagerRepository() *UserManagerRepository {
 	return &UserManagerRepository{}
 }
 func (receiver UserManagerRepository) AddNew(user models.User) (int64, error) {
@@ -38,6 +31,14 @@ func (receiver UserManagerRepository) AddNew(user models.User) (int64, error) {
 func (receiver UserManagerRepository) GetInfoByUsername(username string) (models.User, error) {
 	userModel := models.User{}
 	if ok, err := tools.NewMysqlInstance().Where("username=?", username).Get(&userModel); !ok {
+		return userModel, err
+	}
+	return userModel, nil
+}
+
+func (receiver UserManagerRepository) GetInfoByMobile(mobile string) (models.User, error) {
+	userModel := models.User{}
+	if ok, err := tools.NewMysqlInstance().Where("mobile=?", mobile).Get(&userModel); !ok {
 		return userModel, err
 	}
 	return userModel, nil

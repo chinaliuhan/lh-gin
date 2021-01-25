@@ -67,6 +67,41 @@ func ArticleRouters(engine *gin.Engine) *gin.RouterGroup {
 }
 
 /**
+聊天
+*/
+func ChatRouters(engine *gin.Engine) *gin.RouterGroup {
+
+	//注册session中间件
+	store := cookie.NewStore([]byte("secret"))
+	SessionConfig := tools.NewConfigUtil("app.ini").GetCookieConfig("session")
+	engine.Use(sessions.Sessions(SessionConfig.SessionKey, store))
+
+	//绑定路由
+	engineHandler := engine.Group("/chat/")
+	{
+		controllerHandler := controllers.NewChatController()
+		//注册
+		engineHandler.Any("register", controllerHandler.Register)
+		//登录
+		engineHandler.Any("login", controllerHandler.Login)
+		//上传
+		engineHandler.POST("upload", controllerHandler.Upload)
+		//首页
+		engineHandler.GET("index", controllerHandler.Index)
+		//获取好友列表
+		engineHandler.POST("getFriendList", controllerHandler.GetFriendList)
+		//添加好友
+		engineHandler.POST("addFriend", controllerHandler.AddFriend)
+		//获取群列表
+		engineHandler.POST("getCommunityList", controllerHandler.GetCommunityList)
+		//添加群
+		engineHandler.POST("addCommunityList", controllerHandler.AddCommunityList)
+	}
+
+	return engineHandler
+}
+
+/**
 案例
 */
 func DemoRouters(engine *gin.Engine) *gin.RouterGroup {
