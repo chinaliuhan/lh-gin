@@ -7,11 +7,11 @@
 <div id="convo" data-from="Sonu Joshi">
 
     <ul class="chat-thread">
-         <!--群聊且item.dstid=当前msgcontext.dstid
+         <!--群聊且item.targetid=当前msgcontext.targetid
         <span v-text="JSON.stringify(msglist)"></span>
           -->
-         <!--单聊且是他发的item.userid=msgcontext.dstid && 发给我的 item.dstid=myid 或者是我item.userid= myid发的,&&发给他的item.dstid= msgcontext.dstid 我发给他的  -->
-        <li class="chat " :class="item.ismine?'mine':'other'" v-for="item in msglist" v-if="item.msg.cmd==msgcontext.cmd && (( item.msg.cmd==10 &&  (item.ismine? item.msg.dstid==msgcontext.dstid : item.msg.dstid==msgcontext.userid )) || ( item.msg.cmd==11 &&  (item.msg.dstid==msgcontext.dstid))) ">
+         <!--单聊且是他发的item.userid=msgcontext.targetid && 发给我的 item.targetid=myid 或者是我item.userid= myid发的,&&发给他的item.targetid= msgcontext.targetid 我发给他的  -->
+        <li class="chat " :class="item.ismine?'mine':'other'" v-for="item in msglist" v-if="item.msg.cmd==msgcontext.cmd && (( item.msg.cmd==1 &&  (item.ismine? item.msg.targetid==msgcontext.targetid : item.msg.targetid==msgcontext.userid )) || ( item.msg.cmd==2 &&  (item.msg.targetid==msgcontext.targetid))) ">
             
             <div >
             <img class="avatar" :src="item.user.avatar ||'/assets/chat/images/avatar0.png'" />

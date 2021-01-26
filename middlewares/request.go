@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"lh-gin/tools"
+	"net/http"
+	"strings"
 )
 
 type RequestMiddleware struct {
@@ -25,5 +27,17 @@ func (receiver RequestMiddleware) CheckCookieAndInit(ctx *gin.Context) {
 	uuid := tools.NewGenerate().GenerateUUID()
 	tools.NewCookie(ctx).Set(key, uuid)
 	tools.NewLogUtil().Info(fmt.Sprintf("为IP: %s  设置cookie: %s", ctx.ClientIP(), uuid))
+}
 
+/**
+通过URI自动加载模板
+*/
+func (receiver RequestMiddleware) AutoExecView(ctx *gin.Context) {
+	requestUri := ctx.Request.RequestURI
+	if ok := strings.Contains(requestUri, "shtml"); ok {
+		index := strings.Index(requestUri, "shtml")
+		viewName := requestUri[0 : index+5]
+		tools.NewLogUtil().Info("访问View URL Path:" + requestUri + " view name:" + viewName)
+		ctx.HTML(http.StatusOK, viewName, nil)
+	}
 }

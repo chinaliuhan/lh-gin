@@ -27,3 +27,10 @@ type ChatLoginRequest struct {
 type ChatAddFriendRequest struct {
 	TargetID string `json:"target_id" form:"target_id"  binding:"required,alphanum"` //required 为必须
 }
+
+/**
+聊天
+*/
+type ChatConnectSendRequest struct {
+	Token string `json:"token" form:"token"  binding:"required,alphanum"` //required 为必须
+}

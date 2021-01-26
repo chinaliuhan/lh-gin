@@ -32,6 +32,13 @@ func main() {
 	engine.Use(middlewares.NewRequestMiddleware().CheckCookieAndInit)
 
 	/**
+	加载全部的view **代表目录,*代表文件
+	*/
+	viewsPath := tools.NewCommon().Pwd() + "/public/views/**/*"
+	engine.LoadHTMLGlob(viewsPath)
+	engine.Use(middlewares.NewRequestMiddleware().AutoExecView)
+
+	/**
 	自定义路由文件
 	*/
 	routers.ChatRouters(engine)
@@ -58,9 +65,6 @@ func main() {
 	engine.Static("/chat/assets/", assetsPath)
 	uploadPath := tools.NewCommon().Pwd() + "/public/upload"
 	engine.Static("/chat/avatar/upload", uploadPath)
-	//**代表目录,*代表文件
-	viewsPath := tools.NewCommon().Pwd() + "/public/views/**/*"
-	engine.LoadHTMLGlob(viewsPath)
 
 	//为单个静态资源文件，绑定url
 	favicon := tools.NewCommon().Pwd() + "/public/assets/images/favicon.ico"
@@ -83,6 +87,7 @@ func init() {
 	_, _ = tools.NewMysqlInstance().QueryString("select * from user limit 100")
 	_ = tools.NewMysqlInstance().Sync2(new(models.User))
 	_ = tools.NewMysqlInstance().Sync2(new(models.UserInfo))
+	_ = tools.NewMysqlInstance().Sync2(new(models.UserLoginRecord))
 	_ = tools.NewMysqlInstance().Sync2(new(models.ArticleClassify))
 	_ = tools.NewMysqlInstance().Sync2(new(models.ArticleContent))
 	_ = tools.NewMysqlInstance().Sync2(new(models.ChatCommunity))

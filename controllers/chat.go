@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/fatih/set.v0"
 	"lh-gin/constants"
 	"lh-gin/models"
 	"lh-gin/requests"
@@ -11,6 +14,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type chatController struct {
@@ -93,20 +97,34 @@ func (r *chatController) Login(ctx *gin.Context) {
 
 	//services
 	info, serviceCode = services.NewChatService().Login(&chatLoginRequest)
+	token := fmt.Sprintf("%s...%d", tools.NewGenerate().GenerateUUID(), info.Id)
+	token = tools.NewGenerate().GenerateMd5(token)
 	if serviceCode == constants.SERVICE_SUCCESS {
 		//session
-		err = tools.NewSessionUtil(ctx).SetOne("user_id", info.Id)
+		userLoginRecordModel := models.UserLoginRecord{}
+		userLoginRecordModel.Token = token
+		userLoginRecordModel.UserId = info.Id
+		userLoginRecordModel.CreatedIp = ctx.ClientIP()
+		userLoginRecordModel.Created = time.Now().Unix()
+		_, err = tools.NewMysqlInstance().InsertOne(&userLoginRecordModel)
 		if err != nil {
 			tools.NewResponse(ctx).JsonFailed("登录状态维持失败")
 			tools.NewLogUtil().Error(err.Error())
 			return
 		}
 
-		tools.NewResponse(ctx).JsonSuccess("")
+		tokenMap := make(map[string]interface{}, 1)
+		tokenMap["token"] = token
+		tokenMap["id"] = info.Id
+		tokenMap["avatar"] = info.Avatar
+		tokenMap["nickname"] = info.Nickname
+		tokenMap["memo"] = info.Memo
+		//responseMap := tools.NewJsonUtil().Encode(tokenMap)
+		tools.NewResponse(ctx).JsonSuccess(tokenMap)
 		return
 	}
 
-	tools.NewResponse(ctx).JsonSuccess(nil)
+	tools.NewResponse(ctx).JsonFailed("登录失败")
 	return
 }
 
@@ -128,12 +146,34 @@ func (r *chatController) Index(ctx *gin.Context) {
 获取好友列表
 */
 func (r *chatController) GetFriendList(ctx *gin.Context) {
-	userID := tools.NewSessionUtil(ctx).GetOne("user_id")
-	userID = userID.(int)
 
+	var (
+		err   error
+		token string
+	)
+
+	paramsRequest := requests.ChatConnectSendRequest{}
+	if err = ctx.ShouldBind(&paramsRequest); err != nil {
+		tools.NewLogUtil().SugarPrint(err.Error())
+		tools.NewResponse(ctx).JsonFailed("token参数错误")
+		return
+	}
+	token = paramsRequest.Token
+	tools.NewLogUtil().Info(token)
+	userLoginRecord := models.UserLoginRecord{}
 	db := tools.NewMysqlInstance()
+	_, err = db.Where("token=?", token).And("deleted=0").Get(&userLoginRecord)
+	if err != nil {
+		tools.NewLogUtil().SugarPrint(err.Error())
+		tools.NewResponse(ctx).JsonFailed("登录状态获取失败")
+		return
+	}
+
+	userID := userLoginRecord.UserId
+
+	db = tools.NewMysqlInstance()
 	userContact := make([]models.ChatContact, 0)
-	err := db.Where("user_id=?", userID).Find(&userContact)
+	err = db.Where("user_id=?", userID).Find(&userContact)
 	if err != nil {
 		tools.NewLogUtil().SugarPrint(err.Error())
 		tools.NewResponse(ctx).JsonFailed("系统繁忙")
@@ -143,11 +183,12 @@ func (r *chatController) GetFriendList(ctx *gin.Context) {
 		tools.NewResponse(ctx).JsonFailed("没有好友")
 		return
 	}
-	targetIDList := make([]int, 0)
+	targetIDList := make([]int64, 0)
 	for _, v := range userContact {
 		targetIDList = append(targetIDList, v.TargetId)
 	}
 
+	//todo 返回了非必要的数据,尤其是密码和GA
 	userList := make([]models.User, 0)
 	_ = db.In("id", targetIDList).Find(&userList)
 
@@ -166,6 +207,25 @@ func (r *chatController) AddFriend(ctx *gin.Context) {
 		paramsRequest requests.ChatAddFriendRequest
 	)
 
+	chatToken := requests.ChatConnectSendRequest{}
+	if err = ctx.ShouldBind(&chatToken); err != nil {
+		tools.NewLogUtil().SugarPrint(err.Error())
+		tools.NewResponse(ctx).JsonFailed("token参数错误")
+		return
+	}
+	token := chatToken.Token
+	tools.NewLogUtil().Info(token)
+	userLoginRecord := models.UserLoginRecord{}
+	db := tools.NewMysqlInstance()
+	_, err = db.Where("token=?", token).And("deleted=0").Get(&userLoginRecord)
+	if err != nil {
+		tools.NewLogUtil().SugarPrint(err.Error())
+		tools.NewResponse(ctx).JsonFailed("登录状态获取失败")
+		return
+	}
+
+	userID := userLoginRecord.UserId
+
 	//payload on json
 	if err = ctx.ShouldBind(&paramsRequest); err != nil {
 		tools.NewLogUtil().SugarPrint(err.Error())
@@ -173,9 +233,7 @@ func (r *chatController) AddFriend(ctx *gin.Context) {
 		return
 	}
 
-	userID := tools.NewSessionUtil(ctx).GetOne("user_id")
-	userID = userID.(int)
-	targetID, _ := strconv.Atoi(paramsRequest.TargetID)
+	targetID, _ := strconv.ParseInt(paramsRequest.TargetID, 10, 64)
 	if userID == targetID {
 		tools.NewResponse(ctx).JsonFailed("不能添加自己为好友")
 		return
@@ -183,7 +241,7 @@ func (r *chatController) AddFriend(ctx *gin.Context) {
 
 	contactModel := models.ChatContact{}
 	userModel := models.User{}
-	db := tools.NewMysqlInstance()
+	db = tools.NewMysqlInstance()
 	if ok, err := db.Where("id=?", targetID).And("deleted=?", constants.DbConstant{}.NotDeleted).Get(&userModel); !ok {
 		tools.NewLogUtil().SugarPrint("查询对方失败:", err)
 		tools.NewResponse(ctx).JsonFailed("查无此人")
@@ -208,7 +266,7 @@ func (r *chatController) AddFriend(ctx *gin.Context) {
 	}
 
 	_, err = transaction.Insert(models.ChatContact{
-		UserId:    userID.(int),
+		UserId:    userID,
 		TargetId:  targetID,
 		Created:   0,
 		Updated:   0,
@@ -224,7 +282,7 @@ func (r *chatController) AddFriend(ctx *gin.Context) {
 	_, err = transaction.Insert(
 		models.ChatContact{
 			UserId:    targetID,
-			TargetId:  userID.(int),
+			TargetId:  userID,
 			Created:   0,
 			Updated:   0,
 			CreatedIp: ctx.ClientIP(),
@@ -299,4 +357,82 @@ func (r *chatController) Upload(ctx *gin.Context) {
 
 	tools.NewResponse(ctx).JsonSuccess("avatar/upload/" + fileName)
 	return
+}
+
+/**
+聊天
+*/
+func (r *chatController) ConnectSend(ctx *gin.Context) {
+
+	//get token
+	var (
+		token  string
+		err    error
+		userID int64
+	)
+	paramsRequest := requests.ChatConnectSendRequest{}
+	if err = ctx.ShouldBind(&paramsRequest); err != nil {
+		tools.NewLogUtil().SugarPrint(err.Error())
+		tools.NewResponse(ctx).JsonFailed("token参数错误")
+		return
+	}
+	//validate token
+	token = paramsRequest.Token
+	tools.NewLogUtil().Info(token)
+	userLoginRecord := models.UserLoginRecord{}
+	db := tools.NewMysqlInstance()
+	_, err = db.Where("token=?", token).And("deleted=0").Get(&userLoginRecord)
+	if err != nil {
+		tools.NewLogUtil().SugarPrint(err.Error())
+		tools.NewResponse(ctx).JsonFailed("登录状态获取失败")
+		return
+	}
+	userID = userLoginRecord.UserId
+
+	isValid := true
+	//第三方包	激活conn 同时判断
+	conn, err := (&websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return isValid
+		},
+	}).Upgrade(ctx.Writer, ctx.Request, nil)
+	if err != nil {
+		tools.NewLogUtil().Error("websocket 连接失败: ", err.Error())
+		tools.NewResponse(ctx).JsonFailed("websocket 连接失败")
+	}
+	//only accept websocket
+	if ok := websocket.IsWebSocketUpgrade(ctx.Request); !ok {
+		tools.NewResponse(ctx).JsonFailed("仅限websocket")
+	}
+	//获取conn句柄
+	node := &constants.NodeConstant{
+		Conn:      conn,
+		DataQueue: make(chan []byte, 50),
+		GroupSets: set.New(set.ThreadSafe), //开启一个线程安全的set
+	}
+	//获取用户名下全部的群ID
+	conconts := make([]models.ChatContact, 0)
+	comIds := make([]int64, 0)
+
+	_ = tools.NewMysqlInstance().Where("user_id = ? and type = ?", userID, 1).Find(&conconts)
+	for _, v := range conconts {
+		comIds = append(comIds, v.TargetId)
+	}
+	for _, v := range comIds {
+		//将获取到的信息缓冲到set中
+		node.GroupSets.Add(v)
+	}
+	//将userId和node做对应关系
+	services.Rwlocker.Lock()
+	services.ClientMap[userID] = node
+	services.Rwlocker.Unlock()
+
+	//发送逻辑
+	go services.NewChatService().SendProc(node)
+
+	//接收逻辑
+	go services.NewChatService().RecvProc(node)
+
+	//发送消息
+	services.NewChatService().SendMsg(userID, []byte("哈哈哈哈哈"))
 }

@@ -2,7 +2,7 @@
     <script>
 
         function upload(dom) {
-            uploadfile("attach/upload", dom, function (res) {
+            uploadfile("chat/upload", dom, function (res) {
                 if (res.code == 0) {
                     app.sendpicmsg(res.data)
                 }
@@ -43,7 +43,7 @@
                     msglist: [],
 
                     msgcontext: {
-                        dstid: 10,
+                        targetid: 10,
                         cmd: 10,
                         userid: userId()
                     },
@@ -151,7 +151,7 @@
 
                                 this.recorder.ondataavailable = (event) => {
                                     console.log("ondataavailable");
-                                    uploadblob("attach/upload", event.data, ".mp3", res => {
+                                    uploadblob("chat/upload", event.data, ".mp3", res => {
                                         var duration = Math.ceil((new Date().getTime() - this.duration) / 1000);
                                         this.sendaudiomsg(res.data, duration);
                                     })
@@ -228,6 +228,7 @@
                         data.user = user;
                         data.msg = msg;
                         this.msglist = this.msglist.concat(data)
+                        console.log(this.msglist)
                         this.reset();
                         var that = this;
                         that.timer = setTimeout(function () {
@@ -240,7 +241,8 @@
 
                     },
                     sendtxtmsg: function (txt) {
-                        //{id:1,userid:2,dstid:3,cmd:10,media:1,content:"hello"}
+                        console.log("########发送文本聊天信息: ",txt)
+                        //{id:1,userid:2,targetid:3,cmd:10,media:1,content:"hello"}
                         var msg = this.createmsgcontext();
                         msg.media = 1;
                         msg.content = txt;
@@ -248,7 +250,7 @@
                         this.webSocket.send(JSON.stringify(msg))
                     },
                     sendpicmsg: function (picurl) {
-                        //{id:1,userid:2,dstid:3,cmd:10,media:4,url:"http://www.baidu.com/a/log,jpg"}
+                        //{id:1,userid:2,targetid:3,cmd:10,media:4,url:"http://www.baidu.com/a/log,jpg"}
                         var msg = this.createmsgcontext();
                         msg.media = 4;
                         msg.url = picurl;
@@ -256,7 +258,7 @@
                         this.webSocket.send(JSON.stringify(msg))
                     },
                     sendaudiomsg: function (url, num) {
-                        //{id:1,userid:2,dstid:3,cmd:10,media:3,url:"http://www.a,com/dsturl.mp3",anount:40}
+                        //{id:1,userid:2,targetid:3,cmd:10,media:3,url:"http://www.a,com/dsturl.mp3",anount:40}
                         var msg = this.createmsgcontext();
                         msg.media = 3;
                         msg.url = url;
@@ -269,15 +271,15 @@
                         //console.log(user)
                         this.win = "single";
                         this.title = "和" + user.nickname + "聊天中";
-                        this.msgcontext.dstid = parseInt(user.id);
-                        this.msgcontext.cmd = 10;
+                        this.msgcontext.targetid = parseInt(user.id);
+                        this.msgcontext.cmd = 1;
                     },
                     groupmsg: function (group) {
 
                         this.win = "group";
                         this.title = group.name;
-                        this.msgcontext.dstid = parseInt(group.id);
-                        this.msgcontext.cmd = 11;
+                        this.msgcontext.targetid = parseInt(group.id);
+                        this.msgcontext.cmd = 2;
                     },
                     loaduserinfo: function (userid, cb) {
                         userid = "" + userid;
@@ -299,7 +301,7 @@
 
                     },
                     initwebsocket: function () {
-                        var url = "ws://" + location.host + "/chat?id=" + userId() + "&token=" + util.parseQuery("token");
+                        var url = "ws://" + location.host + "/chat/connectSend?id=" + userId() + "&token=" + util.parseQuery("token");
                         this.webSocket = new WebSocket(url);
                         //消息处理
                         this.webSocket.onmessage = function (evt) {
@@ -327,7 +329,7 @@
                     },
                     loadfriends: function () {
                         var that = this;
-                        post("chat/getFriendList", {userid: userId()}, function (res) {
+                        post("chat/getFriendList?token="+util.parseQuery("token"), {userid: userId()}, function (res) {
                             that.friends = res.data || [];
                             var usermap = this.usermap;
                             for (var i in res.data) {
@@ -378,7 +380,7 @@
                     },
                     _joincomunity: function (dstobj) {
                         var that = this;
-                        post("contact/joincommunity", {dstid: dstobj, "userid": userId()}, function (res) {
+                        post("contact/joincommunity", {targetid: dstobj, "userid": userId()}, function (res) {
                             if (res.code == 0) {
                                 mui.toast("添加成功");
 

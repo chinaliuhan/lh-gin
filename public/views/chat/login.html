@@ -54,6 +54,10 @@
                     if(res.code!=0){
                         mui.toast(res.msg)
                     }else{
+                        //todo 对象键名全部小写,兼容原来前端框架
+                        for (i in res.data) {
+                            res.data[i.toLowerCase()] = res.data[i]
+                        }
                         var url = "/chat/index.shtml?id="+res.data.id
                                 +"&token="+res.data.token
                         userInfo(res.data)
