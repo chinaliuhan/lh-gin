@@ -6,6 +6,12 @@ import (
 	"sync"
 )
 
+const (
+	JWT_TOKEN_KEY      = "token"
+	CONNECT_TYPE_USER  = 1
+	CONNECT_TYPE_GROUP = 2
+)
+
 /**
 消息体
 */
@@ -26,7 +32,7 @@ type MessageConstant struct {
 type NodeConstant struct {
 	Conn      *websocket.Conn
 	DataQueue chan []byte   //并行转串行的队列,Conn 是一个IO型的资源 存在竞争关系
-	GroupSets set.Interface //第三方包,可以快速获取 并集 交集 差集等
+	GroupSets set.Interface //第三方包,可以快速获取 并集 交集 差集等,用以存储群组信息
 }
 
 //映射关系表

@@ -1,13 +1,13 @@
 package controllers
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/fatih/set.v0"
 	"lh-gin/constants"
 	"lh-gin/models"
+	"lh-gin/repositories"
 	"lh-gin/requests"
 	"lh-gin/services"
 	"lh-gin/tools"
@@ -29,7 +29,7 @@ func NewChatController() *chatController {
 /**
 聊天注册
 */
-func (r *chatController) Register(ctx *gin.Context) {
+func (r *chatController) RegisterAction(ctx *gin.Context) {
 	//非POST请求直接返回模板
 	if ctx.Request.Method != http.MethodPost {
 		ctx.HTML(http.StatusOK, "/chat/register.shtml", nil)
@@ -73,7 +73,7 @@ func (r *chatController) Register(ctx *gin.Context) {
 /**
 聊天登录
 */
-func (r *chatController) Login(ctx *gin.Context) {
+func (r *chatController) LoginAction(ctx *gin.Context) {
 	//非POST请求直接返回模板
 	if ctx.Request.Method != http.MethodPost {
 		ctx.HTML(http.StatusOK, "/chat/login.shtml", nil)
@@ -84,7 +84,7 @@ func (r *chatController) Login(ctx *gin.Context) {
 	var (
 		err              error
 		serviceCode      int
-		info             models.User
+		userInfo         models.User
 		chatLoginRequest requests.ChatLoginRequest
 	)
 
@@ -96,42 +96,61 @@ func (r *chatController) Login(ctx *gin.Context) {
 	}
 
 	//services
-	info, serviceCode = services.NewChatService().Login(&chatLoginRequest)
-	token := fmt.Sprintf("%s...%d", tools.NewGenerate().GenerateUUID(), info.Id)
-	token = tools.NewGenerate().GenerateMd5(token)
+	userInfo, serviceCode = services.NewChatService().Login(&chatLoginRequest)
+	token := tools.NewJwtUtil().GenerateToken(&tools.JWTClaims{
+		UserID:   userInfo.Id,
+		Nickname: userInfo.Nickname,
+		Mobile:   userInfo.Mobile,
+	})
+
 	if serviceCode == constants.SERVICE_SUCCESS {
-		//session
-		userLoginRecordModel := models.UserLoginRecord{}
-		userLoginRecordModel.Token = token
-		userLoginRecordModel.UserId = info.Id
-		userLoginRecordModel.CreatedIp = ctx.ClientIP()
-		userLoginRecordModel.Created = time.Now().Unix()
-		_, err = tools.NewMysqlInstance().InsertOne(&userLoginRecordModel)
+		//login history
+		_, err = repositories.NewUserLoginRecordRepository().AddNew(userInfo.Id, token, ctx.ClientIP(), int(time.Now().Unix()))
 		if err != nil {
-			tools.NewResponse(ctx).JsonFailed("登录状态维持失败")
-			tools.NewLogUtil().Error(err.Error())
+			tools.NewLogUtil().Error(err)
+			tools.NewResponse(ctx).JsonFailed("登录失败")
 			return
 		}
 
+		//jwt token 2 cookie
+		tools.NewCookieUtil(ctx).Set("token", token)
+
+		//response json
 		tokenMap := make(map[string]interface{}, 1)
-		tokenMap["token"] = token
-		tokenMap["id"] = info.Id
-		tokenMap["avatar"] = info.Avatar
-		tokenMap["nickname"] = info.Nickname
-		tokenMap["memo"] = info.Memo
-		//responseMap := tools.NewJsonUtil().Encode(tokenMap)
+		tokenMap["token"] = token //jwt token
+		tokenMap["id"] = userInfo.Id
+		tokenMap["avatar"] = userInfo.Avatar
+		tokenMap["nickname"] = userInfo.Nickname
+		tokenMap["memo"] = userInfo.Memo
+
 		tools.NewResponse(ctx).JsonSuccess(tokenMap)
 		return
 	}
+	switch serviceCode {
+	case constants.SERVICE_FAILED:
+		tools.NewLogUtil().Info("登录失败:", serviceCode)
+		fallthrough
+	case constants.SERVICE_NO_EXIST:
+		tools.NewLogUtil().Info("登录失败:", serviceCode)
+		fallthrough
+	case constants.SERVICE_DELETED:
+		tools.NewLogUtil().Info("登录失败:", serviceCode)
+		fallthrough
+	case constants.SERVICE_PASSWORD_ERROR:
+		tools.NewResponse(ctx).JsonFailed("账号密码错误")
+		return
+	default:
+		tools.NewLogUtil().Info("登录失败: 未捕捉到service code")
+		tools.NewResponse(ctx).JsonFailed("系统繁忙请稍后重试")
+		return
+	}
 
-	tools.NewResponse(ctx).JsonFailed("登录失败")
-	return
 }
 
 /**
 首页
 */
-func (r *chatController) Index(ctx *gin.Context) {
+func (r *chatController) IndexAction(ctx *gin.Context) {
 	//非POST请求直接返回模板
 	if ctx.Request.Method != http.MethodPost {
 		ctx.HTML(http.StatusOK, "/chat/index.shtml", nil)
@@ -145,35 +164,29 @@ func (r *chatController) Index(ctx *gin.Context) {
 /**
 获取好友列表
 */
-func (r *chatController) GetFriendList(ctx *gin.Context) {
+func (r *chatController) GetMyFriendListAction(ctx *gin.Context) {
 
 	var (
-		err   error
-		token string
+		err error
 	)
 
-	paramsRequest := requests.ChatConnectSendRequest{}
-	if err = ctx.ShouldBind(&paramsRequest); err != nil {
-		tools.NewLogUtil().SugarPrint(err.Error())
-		tools.NewResponse(ctx).JsonFailed("token参数错误")
+	//登录判断
+	token, _ := tools.NewCookieUtil(ctx).Get(constants.JWT_TOKEN_KEY)
+	if token == "" {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+
 		return
 	}
-	token = paramsRequest.Token
-	tools.NewLogUtil().Info(token)
-	userLoginRecord := models.UserLoginRecord{}
+	jwtClaims := tools.NewJwtUtil().ParseToken(token)
+	userID := jwtClaims.UserID
+	if token == "" || userID <= 0 {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+
 	db := tools.NewMysqlInstance()
-	_, err = db.Where("token=?", token).And("deleted=0").Get(&userLoginRecord)
-	if err != nil {
-		tools.NewLogUtil().SugarPrint(err.Error())
-		tools.NewResponse(ctx).JsonFailed("登录状态获取失败")
-		return
-	}
-
-	userID := userLoginRecord.UserId
-
-	db = tools.NewMysqlInstance()
 	userContact := make([]models.ChatContact, 0)
-	err = db.Where("user_id=?", userID).Find(&userContact)
+	err = db.Where("user_id=? and type=?", userID, constants.CONNECT_TYPE_USER).Find(&userContact)
 	if err != nil {
 		tools.NewLogUtil().SugarPrint(err.Error())
 		tools.NewResponse(ctx).JsonFailed("系统繁忙")
@@ -199,7 +212,7 @@ func (r *chatController) GetFriendList(ctx *gin.Context) {
 /**
 添加好友
 */
-func (r *chatController) AddFriend(ctx *gin.Context) {
+func (r *chatController) AddFriendAction(ctx *gin.Context) {
 
 	//prepare
 	var (
@@ -207,24 +220,19 @@ func (r *chatController) AddFriend(ctx *gin.Context) {
 		paramsRequest requests.ChatAddFriendRequest
 	)
 
-	chatToken := requests.ChatConnectSendRequest{}
-	if err = ctx.ShouldBind(&chatToken); err != nil {
-		tools.NewLogUtil().SugarPrint(err.Error())
-		tools.NewResponse(ctx).JsonFailed("token参数错误")
-		return
-	}
-	token := chatToken.Token
-	tools.NewLogUtil().Info(token)
-	userLoginRecord := models.UserLoginRecord{}
-	db := tools.NewMysqlInstance()
-	_, err = db.Where("token=?", token).And("deleted=0").Get(&userLoginRecord)
-	if err != nil {
-		tools.NewLogUtil().SugarPrint(err.Error())
-		tools.NewResponse(ctx).JsonFailed("登录状态获取失败")
-		return
-	}
+	//登录判断
+	token, _ := tools.NewCookieUtil(ctx).Get(constants.JWT_TOKEN_KEY)
+	if token == "" {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
 
-	userID := userLoginRecord.UserId
+		return
+	}
+	jwtClaims := tools.NewJwtUtil().ParseToken(token)
+	userID := jwtClaims.UserID
+	if token == "" || userID <= 0 {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
 
 	//payload on json
 	if err = ctx.ShouldBind(&paramsRequest); err != nil {
@@ -241,6 +249,7 @@ func (r *chatController) AddFriend(ctx *gin.Context) {
 
 	contactModel := models.ChatContact{}
 	userModel := models.User{}
+	db := tools.NewMysqlInstance()
 	db = tools.NewMysqlInstance()
 	if ok, err := db.Where("id=?", targetID).And("deleted=?", constants.DbConstant{}.NotDeleted).Get(&userModel); !ok {
 		tools.NewLogUtil().SugarPrint("查询对方失败:", err)
@@ -268,6 +277,7 @@ func (r *chatController) AddFriend(ctx *gin.Context) {
 	_, err = transaction.Insert(models.ChatContact{
 		UserId:    userID,
 		TargetId:  targetID,
+		Type:      constants.CONNECT_TYPE_USER,
 		Created:   0,
 		Updated:   0,
 		CreatedIp: ctx.ClientIP(),
@@ -283,6 +293,7 @@ func (r *chatController) AddFriend(ctx *gin.Context) {
 		models.ChatContact{
 			UserId:    targetID,
 			TargetId:  userID,
+			Type:      constants.CONNECT_TYPE_USER,
 			Created:   0,
 			Updated:   0,
 			CreatedIp: ctx.ClientIP(),
@@ -309,16 +320,183 @@ func (r *chatController) AddFriend(ctx *gin.Context) {
 /**
 获取群
 */
-func (r *chatController) GetCommunityList(ctx *gin.Context) {
+func (r *chatController) GetCommunityListAction(ctx *gin.Context) {
+	//登录判断
+	token, _ := tools.NewCookieUtil(ctx).Get(constants.JWT_TOKEN_KEY)
+	if token == "" {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+	jwtClaims := tools.NewJwtUtil().ParseToken(token)
+	userID := jwtClaims.UserID
+	if token == "" || userID <= 0 {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+
+	contacts := make([]models.ChatContact, 0)
+	comIds := make([]int64, 0)
+
+	_ = tools.NewMysqlInstance().Where("user_id = ? and type = ? and deleted=0", userID, 2).Find(&contacts)
+	for _, v := range contacts {
+		comIds = append(comIds, v.TargetId)
+	}
+	coms := make([]models.ChatCommunity, 0)
+	if len(comIds) == 0 {
+		tools.NewResponse(ctx).JsonFailed("你没有加入群聊")
+	}
+	_ = tools.NewMysqlInstance().In("id", comIds).Find(&coms)
+
+	//todo 数据未过滤
+	tools.NewResponse(ctx).JsonSuccess(coms)
+	return
+}
+
+/**
+创建群
+*/
+func (r *chatController) CreateCommunityAction(ctx *gin.Context) {
+
+	var (
+		err error
+	)
+
+	//prepare
+	requestPrams := requests.ChatCreateCommunity{}
+	if err := ctx.ShouldBind(&requestPrams); err != nil {
+		tools.NewLogUtil().Error(err.Error())
+		tools.NewResponse(ctx).JsonFailed("参数错误")
+		return
+	}
+
+	//登录判断
+	token, _ := tools.NewCookieUtil(ctx).Get(constants.JWT_TOKEN_KEY)
+	if token == "" {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+
+		return
+	}
+	jwtClaims := tools.NewJwtUtil().ParseToken(token)
+	userID := jwtClaims.UserID
+	if token == "" || userID <= 0 {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+	db := tools.NewMysqlInstance()
+
+	//create group
+	if len(requestPrams.Name) == 0 {
+		tools.NewResponse(ctx).JsonFailed("请输入群名称")
+	}
+	groupModel := models.ChatCommunity{}
+	groupModel.UserId = userID
+
+	countGroup, err := db.Count(&groupModel)
+	if countGroup > 10 {
+		tools.NewResponse(ctx).JsonFailed("一个用户最多最多创建10个群")
+		return
+	} else {
+		dbSession := db.NewSession()
+		_ = dbSession.Begin()
+		groupModel.Created = int(time.Now().Unix())
+		groupModel.CreatedIp = ctx.ClientIP()
+		groupModel.Type = constants.CONNECT_TYPE_USER
+		groupModel.Name = requestPrams.Name
+		groupModel.Icon = requestPrams.Icon
+		groupModel.Memo = requestPrams.Memo
+
+		_, err = dbSession.InsertOne(&groupModel)
+		if err != nil {
+			_ = dbSession.Rollback()
+			tools.NewLogUtil().Error(err)
+			tools.NewResponse(ctx).JsonFailed("系统繁忙")
+		}
+		_, err := dbSession.InsertOne(
+			models.ChatContact{
+				UserId:   groupModel.UserId,
+				TargetId: groupModel.Id,
+				Type:     2,
+				Created:  int(time.Now().Unix()),
+			})
+		if err != nil {
+			_ = dbSession.Rollback()
+			tools.NewLogUtil().Error(err)
+			tools.NewResponse(ctx).JsonFailed("系统繁忙")
+		}
+
+		_ = dbSession.Commit()
+	}
 
 	tools.NewResponse(ctx).JsonSuccess(nil)
 	return
 }
 
 /**
-添加群
+加入群
 */
-func (r *chatController) AddCommunityList(ctx *gin.Context) {
+func (r *chatController) JoinCommunityAction(ctx *gin.Context) {
+
+	var (
+		err error
+	)
+
+	//prepare
+	requestPrams := requests.ChatJoinCommunity{}
+	if err := ctx.ShouldBind(&requestPrams); err != nil {
+		tools.NewLogUtil().Error(err.Error())
+		tools.NewResponse(ctx).JsonFailed("参数错误")
+		return
+	}
+	//登录判断
+	token, _ := tools.NewCookieUtil(ctx).Get(constants.JWT_TOKEN_KEY)
+	if token == "" {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+	jwtClaims := tools.NewJwtUtil().ParseToken(token)
+	userID := jwtClaims.UserID
+	if token == "" || userID <= 0 {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+	db := tools.NewMysqlInstance()
+
+	//判断群是否存在
+	chatCommunityModel := &models.ChatCommunity{}
+	_, err = db.Where("id=? and deleted=0", requestPrams.TargetID).Get(chatCommunityModel)
+	if err != nil || chatCommunityModel.Id <= 0 {
+		tools.NewResponse(ctx).JsonFailed("不存在该群")
+		return
+	}
+	//判断是否已入群
+	chatContactModel := models.ChatContact{
+		UserId:   userID,
+		TargetId: requestPrams.TargetID,
+		Type:     constants.CONNECT_TYPE_USER,
+		Deleted:  0,
+	}
+	if _, err = db.Get(&chatContactModel); err == nil && chatContactModel.Id > 0 {
+		tools.NewResponse(ctx).JsonFailed("已入群")
+		return
+	}
+
+	//添加聊天关系
+	chatContactModel.Created = int(time.Now().Unix())
+	_, err = db.InsertOne(chatContactModel)
+	if err != nil {
+		tools.NewLogUtil().SugarPrint(err)
+		tools.NewResponse(ctx).JsonFailed("入群失败")
+		return
+	}
+
+	//取得node,添加gid到set
+	services.Rwlocker.Lock()
+	node, ok := services.ClientMap[userID]
+	if ok {
+		node.GroupSets.Add(requestPrams.TargetID)
+	}
+	//clientMap[userId] = node
+	services.Rwlocker.Unlock()
 
 	tools.NewResponse(ctx).JsonSuccess(nil)
 	return
@@ -327,7 +505,7 @@ func (r *chatController) AddCommunityList(ctx *gin.Context) {
 /**
 上传头像
 */
-func (r *chatController) Upload(ctx *gin.Context) {
+func (r *chatController) UploadAction(ctx *gin.Context) {
 
 	//prepare
 	var (
@@ -347,7 +525,7 @@ func (r *chatController) Upload(ctx *gin.Context) {
 	fileName = file.Filename
 	//todo 暂时存储,后面会用云存储,可通过配置使用本地存储还是云存储
 	//save file
-	uploadPath := tools.NewCommon().Pwd() + "/public/upload/" + fileName
+	uploadPath := tools.NewCommonUtil().Pwd() + "/public/upload/" + fileName
 	err = ctx.SaveUploadedFile(file, uploadPath)
 	if err != nil {
 		tools.NewLogUtil().Error(err.Error())
@@ -362,35 +540,32 @@ func (r *chatController) Upload(ctx *gin.Context) {
 /**
 聊天
 */
-func (r *chatController) ConnectSend(ctx *gin.Context) {
+func (r *chatController) ConnectSendAction(ctx *gin.Context) {
 
-	//get token
 	var (
-		token  string
-		err    error
-		userID int64
+		err error
 	)
-	paramsRequest := requests.ChatConnectSendRequest{}
-	if err = ctx.ShouldBind(&paramsRequest); err != nil {
-		tools.NewLogUtil().SugarPrint(err.Error())
-		tools.NewResponse(ctx).JsonFailed("token参数错误")
+	//only accept websocket
+	if ok := websocket.IsWebSocketUpgrade(ctx.Request); !ok {
+		tools.NewResponse(ctx).JsonFailed("仅限websocket")
 		return
 	}
+
 	//validate token
-	token = paramsRequest.Token
-	tools.NewLogUtil().Info(token)
-	userLoginRecord := models.UserLoginRecord{}
-	db := tools.NewMysqlInstance()
-	_, err = db.Where("token=?", token).And("deleted=0").Get(&userLoginRecord)
-	if err != nil {
-		tools.NewLogUtil().SugarPrint(err.Error())
-		tools.NewResponse(ctx).JsonFailed("登录状态获取失败")
+	token, _ := tools.NewCookieUtil(ctx).Get(constants.JWT_TOKEN_KEY)
+	if token == "" {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
 		return
 	}
-	userID = userLoginRecord.UserId
+	jwtClaims := tools.NewJwtUtil().ParseToken(token)
+	userID := jwtClaims.UserID
+	if token == "" || userID <= 0 {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
 
 	isValid := true
-	//第三方包	激活conn 同时判断
+	//第三方websocket包,激活conn 同时判断
 	conn, err := (&websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return isValid
@@ -400,39 +575,36 @@ func (r *chatController) ConnectSend(ctx *gin.Context) {
 		tools.NewLogUtil().Error("websocket 连接失败: ", err.Error())
 		tools.NewResponse(ctx).JsonFailed("websocket 连接失败")
 	}
-	//only accept websocket
-	if ok := websocket.IsWebSocketUpgrade(ctx.Request); !ok {
-		tools.NewResponse(ctx).JsonFailed("仅限websocket")
-	}
+
 	//获取conn句柄
 	node := &constants.NodeConstant{
 		Conn:      conn,
-		DataQueue: make(chan []byte, 50),
-		GroupSets: set.New(set.ThreadSafe), //开启一个线程安全的set
+		DataQueue: make(chan []byte, 50),   //并行转串行的队列,Conn 是一个IO型的资源 存在竞争关系
+		GroupSets: set.New(set.ThreadSafe), //第三方包,可以快速获取 并集 交集 差集等,开启一个线程安全的set, 用以存储群组信息
 	}
-	//获取用户名下全部的群ID
-	conconts := make([]models.ChatContact, 0)
-	comIds := make([]int64, 0)
+	//获取用户名下全部的群ID,只处理群即可,c2c的不用管,c2c存在一个Map中只发即可不需要群发
+	chatContactModels := make([]models.ChatContact, 0)
+	groupIDs := make([]int64, 0)
 
-	_ = tools.NewMysqlInstance().Where("user_id = ? and type = ?", userID, 1).Find(&conconts)
-	for _, v := range conconts {
-		comIds = append(comIds, v.TargetId)
+	_ = tools.NewMysqlInstance().Where("user_id = ? and type = ? ", userID, constants.CONNECT_TYPE_GROUP).Find(&chatContactModels)
+	for _, v := range chatContactModels {
+		groupIDs = append(groupIDs, v.TargetId)
 	}
-	for _, v := range comIds {
+	for _, v := range groupIDs {
 		//将获取到的信息缓冲到set中
 		node.GroupSets.Add(v)
 	}
-	//将userId和node做对应关系
+	//将userId即连接者和node做对应关系,c2c存在此MAP中,直接发即可
 	services.Rwlocker.Lock()
 	services.ClientMap[userID] = node
 	services.Rwlocker.Unlock()
 
 	//发送逻辑
-	go services.NewChatService().SendProc(node)
+	go services.NewChatService().SendProcess(node)
 
 	//接收逻辑
-	go services.NewChatService().RecvProc(node)
+	go services.NewChatService().ReceiveProcess(node)
 
 	//发送消息
-	services.NewChatService().SendMsg(userID, []byte("哈哈哈哈哈"))
+	services.NewChatService().SendMsg(userID, []byte("welcome connect"))
 }

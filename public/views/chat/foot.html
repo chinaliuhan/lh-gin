@@ -241,7 +241,7 @@
 
                     },
                     sendtxtmsg: function (txt) {
-                        console.log("########发送文本聊天信息: ",txt)
+                        console.log("########发送文本聊天信息: ", txt)
                         //{id:1,userid:2,targetid:3,cmd:10,media:1,content:"hello"}
                         var msg = this.createmsgcontext();
                         msg.media = 1;
@@ -298,10 +298,9 @@
                         this.loaduserinfo(data.userid, function (user) {
                             this.showmsg(user, data)
                         }.bind(this))
-
                     },
                     initwebsocket: function () {
-                        var url = "ws://" + location.host + "/chat/connectSend?id=" + userId() + "&token=" + util.parseQuery("token");
+                        var url = "ws://" + location.host + "/chat/connectSend"
                         this.webSocket = new WebSocket(url);
                         //消息处理
                         this.webSocket.onmessage = function (evt) {
@@ -311,6 +310,20 @@
                             } else {
                                 console.log("recv<==" + evt.data)
                             }
+                        }.bind(this)
+                        this.webSocket.onopen = function (evt) {
+                            console.log("websocket connect: " + this.webSocket.readyState)
+                            //状态维护
+                            var timer = function () {
+                                if (evt.target.readyState === 1) {
+                                    console.log("websocket状态正常,发送心跳信息")
+                                    evt.target.send("ping...")
+                                } else {
+                                    console.log("websocket状态有误,当前状态为: " + evt.target.readyState)
+                                }
+                                setTimeout(timer, 1000 * 30)
+                            }
+                            timer()
                         }.bind(this)
                         //关闭回调
                         this.webSocket.onclose = function (evt) {
@@ -329,7 +342,7 @@
                     },
                     loadfriends: function () {
                         var that = this;
-                        post("chat/getFriendList?token="+util.parseQuery("token"), {userid: userId()}, function (res) {
+                        post("chat/getMyFriendList?token=" + util.parseQuery("token"), {userid: userId()}, function (res) {
                             that.friends = res.data || [];
                             var usermap = this.usermap;
                             for (var i in res.data) {
@@ -347,7 +360,14 @@
                     loadcommunitys: function () {
                         var that = this;
                         post("chat/getCommunityList", {userid: userId()}, function (res) {
-                            that.communitys = res.rows || [];
+                            //todo 对象键名全部小写,兼容原来前端框架
+                            for (var i in res.data) {
+                                //todo 对象键名全部小写,兼容原来前端框架
+                                for (key in res.data[i]) {
+                                    res.data[i][key.toLowerCase()] = res.data[i][key]
+                                }
+                            }
+                            that.communitys = res.data || [];
                         })
                     },
                     addfriend: function () {
@@ -380,7 +400,7 @@
                     },
                     _joincomunity: function (dstobj) {
                         var that = this;
-                        post("contact/joincommunity", {targetid: dstobj, "userid": userId()}, function (res) {
+                        post("chat/joinCommunity", {target_id: dstobj, "userid": userId()}, function (res) {
                             if (res.code == 0) {
                                 mui.toast("添加成功");
 

@@ -34,3 +34,20 @@ type ChatAddFriendRequest struct {
 type ChatConnectSendRequest struct {
 	Token string `json:"token" form:"token"  binding:"required,alphanum"` //required 为必须
 }
+
+/**
+创建聊天群
+*/
+type ChatCreateCommunity struct {
+	Name string `json:"name" form:"name"  binding:"required,min=1,max=32,alphanum"` //required 为必须
+	Type int    `json:"type" form:"type"  binding:"required,numeric"`
+	Memo string `json:"memo" form:"memo"  binding:"required,alphanum"`
+	Icon string `json:"icon" form:"icon"  binding:"uri|url|url_encoded"`
+}
+
+/**
+加入群组
+*/
+type ChatJoinCommunity struct {
+	TargetID int64 `json:"target_id" form:"target_id"  binding:"required,numeric"` //required 为必须
+}

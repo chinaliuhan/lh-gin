@@ -121,7 +121,7 @@ func NewMysqlUtil(params ...string) *MysqlUtil {
 		}
 
 		//自动识别配置文件
-		folder = NewCommon().Pwd() + "/conf/"
+		folder = NewCommonUtil().Pwd() + "/conf/"
 		_, err = os.Stat(folder + "db.ini")
 		if os.IsNotExist(err) {
 			filename = "db.ini"
@@ -235,7 +235,7 @@ func (r *MysqlUtil) GetConnect() *mysqlInstance {
 //		}
 //
 //		//自动识别配置文件
-//		folder = NewCommon().Pwd() + "/conf/"
+//		folder = NewCommonUtil().Pwd() + "/conf/"
 //		_, err = os.Stat(folder + "db.ini")
 //		if os.IsNotExist(err) {
 //			filename = "db.ini"

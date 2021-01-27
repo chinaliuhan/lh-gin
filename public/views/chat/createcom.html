@@ -55,7 +55,7 @@
 
             <div class="mui-input-row">
                 <label>类型</label>
-                <select v-model="com.cate" class="mui-input-clear mui-input">
+                <select v-model="com.type" class="mui-input-clear mui-input">
                     <option value="0">默认</option>
                     <option value="1">兴趣爱好</option>
                     <option value="2">行业交流</option>
@@ -112,15 +112,14 @@
                 data:{
                     com:{
                         name:"",
-                        cate:0,
+                        type:0,
                         memo:"",
                         icon:"/assets/chat/images/community.png",
-                        ownerid:0
+                        user_id:0
                     },
-
                 },
                 created:function(){
-                  this.com.ownerid=userId();
+                  this.com.user_id=userId();
                 },
                 methods:{
                     createcommunity:function(){
@@ -128,7 +127,7 @@
                             mui.toast("请填写名称")
                             return
                         }
-                        post("contact/createcommunity",this.com,function(res){
+                        post("chat/createCommunity",this.com,function(res){
                             if(res.code==0){
                                 mui.toast("创建成功");
                             }else{

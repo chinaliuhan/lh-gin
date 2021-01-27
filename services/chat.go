@@ -40,18 +40,19 @@ func (r *chatService) Login(params *requests.ChatLoginRequest) (models.User, int
 }
 
 //接收协程
-func (r *chatService) RecvProc(node *constants.NodeConstant) {
+func (r *chatService) ReceiveProcess(node *constants.NodeConstant) {
 	for {
-		_, data, err := node.Conn.ReadMessage()
+		//读取数据包
+		_, message, err := node.Conn.ReadMessage()
 		if err != nil {
 			log.Println(err.Error())
 			return
 		}
 
-		fmt.Printf("[ws]recv<=%s\n", data)
+		fmt.Printf("[ws]recv<=%s\n", message)
 
 		//进一步处理接收到的消息,单一服务器情况下可以直接发送
-		r.Dispatch(data)
+		r.Dispatch(message)
 
 		//分布式情况下, 需要将消息广播到局域网,或者使用消息队列,或者使用NGINX中间件做分发
 		//boardMsg(data)
@@ -60,7 +61,7 @@ func (r *chatService) RecvProc(node *constants.NodeConstant) {
 }
 
 //发送协程
-func (r *chatService) SendProc(node *constants.NodeConstant) {
+func (r *chatService) SendProcess(node *constants.NodeConstant) {
 	for {
 		select {
 		case data := <-node.DataQueue:
@@ -100,27 +101,27 @@ const (
 //接收消息后的调度逻辑处理
 func (r *chatService) Dispatch(data []byte) {
 	//解析data 为message
-	msg := constants.MessageConstant{}
-	err := json.Unmarshal(data, &msg)
+	message := constants.MessageConstant{}
+	err := json.Unmarshal(data, &message)
 	if err != nil {
 		//解析失败
 		log.Println(err.Error())
 		return
 	}
 	//根据cmd字段对逻辑进行处理
-	switch msg.Cmd {
+	switch message.Cmd {
 	case CMD_SINGLE_MSG: //单聊
 		//发送消息
-		r.SendMsg(msg.TargetID, data)
+		r.SendMsg(message.TargetID, data)
 	case CMD_ROOM_MSG: //群聊
 		//群聊转发逻辑
 		for _, v := range ClientMap {
-			if v.GroupSets.Has(msg.TargetID) {
+			if v.GroupSets.Has(message.TargetID) {
 				v.DataQueue <- data
 			}
 		}
 	case CMD_HEART: //心跳
 		//一般不用管
-		tools.NewLogUtil().Info("websocket 心跳: ", msg.Id)
+		tools.NewLogUtil().Info("websocket 心跳: ", message.Id)
 	}
 }

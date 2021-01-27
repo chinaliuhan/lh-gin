@@ -5,6 +5,7 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"lh-gin/controllers"
+	"lh-gin/middlewares"
 	"lh-gin/tools"
 )
 
@@ -70,34 +71,35 @@ func ArticleRouters(engine *gin.Engine) *gin.RouterGroup {
 聊天
 */
 func ChatRouters(engine *gin.Engine) *gin.RouterGroup {
-
-	//注册session中间件
-	store := cookie.NewStore([]byte("secret"))
-	SessionConfig := tools.NewConfigUtil("app.ini").GetCookieConfig("session")
-	engine.Use(sessions.Sessions(SessionConfig.SessionKey, store))
+	controllerHandler := controllers.NewChatController()
+	//注册 登录
+	engine.Any("/chat/register", controllerHandler.RegisterAction)
+	engine.Any("/chat/login", controllerHandler.LoginAction)
 
 	//绑定路由
-	engineHandler := engine.Group("/chat/")
+	engineHandler := engine.Group("/chat/", middlewares.NewRequestMiddleware().JWTTokenVerify)
 	{
 		controllerHandler := controllers.NewChatController()
 		//注册
-		engineHandler.Any("register", controllerHandler.Register)
+		//engineHandler.Any("register", controllerHandler.RegisterAction)
 		//登录
-		engineHandler.Any("login", controllerHandler.Login)
+		//engineHandler.Any("login", controllerHandler.LoginAction)
 		//上传
-		engineHandler.POST("upload", controllerHandler.Upload)
+		engineHandler.POST("upload", controllerHandler.UploadAction)
 		//首页
-		engineHandler.GET("index", controllerHandler.Index)
+		engineHandler.GET("index", controllerHandler.IndexAction)
 		//获取好友列表
-		engineHandler.POST("getFriendList", controllerHandler.GetFriendList)
+		engineHandler.POST("getMyFriendList", controllerHandler.GetMyFriendListAction)
 		//添加好友
-		engineHandler.POST("addFriend", controllerHandler.AddFriend)
+		engineHandler.POST("addFriend", controllerHandler.AddFriendAction)
 		//获取群列表
-		engineHandler.POST("getCommunityList", controllerHandler.GetCommunityList)
+		engineHandler.POST("getCommunityList", controllerHandler.GetCommunityListAction)
 		//添加群
-		engineHandler.POST("addCommunityList", controllerHandler.AddCommunityList)
+		engineHandler.POST("createCommunity", controllerHandler.CreateCommunityAction)
+		//加入群
+		engineHandler.POST("joinCommunity", controllerHandler.JoinCommunityAction)
 		//聊天
-		engineHandler.Any("connectSend", controllerHandler.ConnectSend)
+		engineHandler.Any("connectSend", controllerHandler.ConnectSendAction)
 	}
 
 	return engineHandler

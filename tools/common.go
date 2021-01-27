@@ -1,19 +1,21 @@
 package tools
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"log"
 	"os"
 	"reflect"
 )
 
-type Common struct {
+type CommonUtil struct {
 }
 
-func NewCommon() *Common {
-	return &Common{}
+func NewCommonUtil() *CommonUtil {
+	return &CommonUtil{}
 }
 
-func (r *Common) Pwd() string {
+func (r *CommonUtil) Pwd() string {
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Println("获取当前路径失败: ", err)
@@ -23,7 +25,7 @@ func (r *Common) Pwd() string {
 	return pwd
 }
 
-func (r *Common) Struct2Map(myStruct interface{}) map[string]interface{} {
+func (r *CommonUtil) Struct2Map(myStruct interface{}) map[string]interface{} {
 	t := reflect.TypeOf(myStruct)
 	v := reflect.ValueOf(myStruct)
 
@@ -34,7 +36,7 @@ func (r *Common) Struct2Map(myStruct interface{}) map[string]interface{} {
 	return data
 }
 
-func (r *Common) StructPointer2Map2(myStruct *interface{}) map[string]interface{} {
+func (r *CommonUtil) StructPointer2Map2(myStruct *interface{}) map[string]interface{} {
 	v := reflect.ValueOf(myStruct).Elem()
 	typeOfType := v.Type()
 	var data = make(map[string]interface{})
@@ -43,4 +45,35 @@ func (r *Common) StructPointer2Map2(myStruct *interface{}) map[string]interface{
 		data[typeOfType.Field(i).Name] = field.Interface()
 	}
 	return data
+}
+
+func (r *CommonUtil) JsonEncode(data interface{}) (string, error) {
+
+	bytes, err := json.Marshal(data)
+	if err == nil {
+		return string(bytes), nil
+	}
+	return "", err
+}
+
+func (r *CommonUtil) JsonDecode(jsonStr string, data interface{}) (interface{}, error) {
+
+	err := json.Unmarshal([]byte(jsonStr), data)
+	if err == nil {
+		return data, nil
+	}
+	return nil, err
+}
+
+func (r *CommonUtil) Base64Encode(str string) string {
+	strBytes := []byte(str)
+	return base64.StdEncoding.EncodeToString(strBytes)
+}
+
+func (r *CommonUtil) Base64Decode(str string) (string, error) {
+	decoded, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		return "", nil
+	}
+	return string(decoded), nil
 }

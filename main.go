@@ -34,7 +34,7 @@ func main() {
 	/**
 	加载全部的view **代表目录,*代表文件
 	*/
-	viewsPath := tools.NewCommon().Pwd() + "/public/views/**/*"
+	viewsPath := tools.NewCommonUtil().Pwd() + "/public/views/**/*"
 	engine.LoadHTMLGlob(viewsPath)
 	engine.Use(middlewares.NewRequestMiddleware().AutoExecView)
 
@@ -58,18 +58,18 @@ func main() {
 	/**
 	静态资源
 	*/
-	//staticPath := tools.NewCommon().Pwd() + "/public/static"
+	//staticPath := tools.NewCommonUtil().Pwd() + "/public/static"
 	//engine.Static("/static", staticPath)
-	assetsPath := tools.NewCommon().Pwd() + "/public/assets"
+	assetsPath := tools.NewCommonUtil().Pwd() + "/public/assets"
 	engine.Static("/assets", assetsPath)
 	engine.Static("/chat/assets/", assetsPath)
-	uploadPath := tools.NewCommon().Pwd() + "/public/upload"
+	uploadPath := tools.NewCommonUtil().Pwd() + "/public/upload"
 	engine.Static("/chat/avatar/upload", uploadPath)
 
 	//为单个静态资源文件，绑定url
-	favicon := tools.NewCommon().Pwd() + "/public/assets/images/favicon.ico"
+	favicon := tools.NewCommonUtil().Pwd() + "/public/assets/images/favicon.ico"
 	engine.StaticFile("/favicon.ico", favicon)
-	indexHtml := tools.NewCommon().Pwd() + "/public/static/login.html"
+	indexHtml := tools.NewCommonUtil().Pwd() + "/public/static/login.html"
 	engine.StaticFile("/", indexHtml)
 
 	/**

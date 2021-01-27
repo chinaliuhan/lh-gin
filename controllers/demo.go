@@ -24,6 +24,12 @@ func SetSession(ctx *gin.Context) {
 }
 func GetSession(ctx *gin.Context) {
 
+	token := ctx.Query("token")
+	claim := tools.NewJwtUtil().ParseToken(token)
+	json := tools.NewJsonUtil().Encode(claim)
+	ctx.String(http.StatusOK, json, nil)
+	return
+
 	tools.NewMysqlInstance()
 
 	key := ctx.Query("key")
