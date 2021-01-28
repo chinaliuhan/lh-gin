@@ -41,7 +41,6 @@
                         choosed: {"pkgid": "emoj", "assets": [], "size": "small"}
                     },
                     msglist: [],
-
                     msgcontext: {
                         targetid: 10,
                         cmd: 10,
@@ -229,7 +228,6 @@
                         data.user = user;
                         data.msg = msg;
                         this.msglist = this.msglist.concat(data)
-                        console.log(this.msglist)
                         this.reset();
                         var that = this;
                         that.timer = setTimeout(function () {
@@ -294,22 +292,31 @@
                             cb(userinfo)
                         }
                     },
-                    getChatRecord: function(){
-                        // post("chat/getMyChatRecord", "", function (res) {
-                        //     for (var i in res.data) {
-                        //         //todo 对象键名全部小写,兼容原来前端框架
-                        //         for (var key in res.data[i]) {
-                        //             res.data[i][key.toLowerCase()] = res.data[i][key]
-                        //         }
-                        //     }
-                        //     this.showmsg(userInfo(), res.data.in)
-                        // })
-                    },
                     onmessage: function (data) {
-
+                        console.log(data)
                         this.loaduserinfo(data.userid, function (user) {
                             this.showmsg(user, data)
                         }.bind(this))
+                    },
+                    getChatRecord: function(){
+                        let that  =this;
+                        let userinfo  = userInfo();
+                        console.log(userinfo)
+                        post("chat/getMyChatRecord", "", function (res) {
+                            console.log(res);
+                            for (let i in res.data) {
+                                let tmp = {};
+                                // tmp['userid'] = res.data[i].TargetId;
+                                // tmp['targetid'] = res.data[i].TargetId;
+                                tmp['userid'] = res.data[i].UserId;
+                                tmp['targetid'] = res.data[i].TargetId;
+                                tmp['content'] = res.data[i].Content;
+                                tmp['media'] = res.data[i].Mime;
+                                tmp['cmd'] = res.data[i].Category;
+                                tmp['url'] = res.data[i].Url;
+                                that.showmsg(userinfo, tmp)
+                            }
+                        })
                     },
                     initwebsocket: function () {
                         var url = "ws://" + location.host + "/chat/connectSend"

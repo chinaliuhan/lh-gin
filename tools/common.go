@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 )
 
 type CommonUtil struct {
@@ -76,4 +77,12 @@ func (r *CommonUtil) Base64Decode(str string) (string, error) {
 		return "", nil
 	}
 	return string(decoded), nil
+}
+
+func (r *CommonUtil) Array2String(arr []string, limit string) string {
+	var str string
+	for _, v := range arr { //遍历数组中所有元素追加成string
+		str = str + limit + v
+	}
+	return strings.Trim(str, limit)
 }

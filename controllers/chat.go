@@ -13,6 +13,7 @@ import (
 	"lh-gin/tools"
 	"mime/multipart"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -336,11 +337,42 @@ func (r *chatController) GetMyChatRecord(ctx *gin.Context) {
 		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
 		return
 	}
-	recordList, err := services.NewChatService().GetChatRecordByUidAndTime(userID, 0)
+	myFriends, err := services.NewChatService().GetMyFriends(userID)
 	if err != nil {
 		tools.NewResponse(ctx).JsonFailed("获取聊天记录失败")
 		return
 	}
+	var friendsID []string
+	for _, v := range myFriends {
+		friendsID = append(friendsID, strconv.FormatInt(v.TargetId, 10))
+	}
+
+	myRecordList, err := services.NewChatService().GetChatRecordByUidAndTimeAndMyFriend(userID, 0, friendsID)
+	if err != nil {
+		tools.NewResponse(ctx).JsonFailed("获取聊天记录失败")
+		return
+	}
+	targetRecordList, err := services.NewChatService().GetChatRecordByTargetAndTimeAndMyFriend(userID, 0, friendsID)
+	if err != nil {
+		tools.NewResponse(ctx).JsonFailed("获取聊天记录失败")
+		return
+	}
+	recordList := make([]models.ChatRecord, 0)
+
+	for _, v := range myRecordList {
+		recordList = append(recordList, v)
+	}
+	for _, v := range targetRecordList {
+		recordList = append(recordList, v)
+	}
+
+	recordIDList := []int{}
+	for _, v := range recordList {
+		recordIDList = append(recordIDList, v.Id)
+	}
+
+	//相当于PHP的多维数组排序
+	sort.SliceStable(recordList, func(i, j int) bool { return recordList[i].Id < recordList[j].Id })
 
 	//todo 数据未过滤
 	tools.NewResponse(ctx).JsonSuccess(recordList)

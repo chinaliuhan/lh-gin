@@ -84,7 +84,7 @@ func main() {
 
 func init() {
 	//同步表结构到MySQL todo
-	_, _ = tools.NewMysqlInstance().QueryString("select * from user limit 100")
+	_ = tools.NewMysqlInstance().Ping()
 	_ = tools.NewMysqlInstance().Sync2(new(models.User))
 	_ = tools.NewMysqlInstance().Sync2(new(models.UserInfo))
 	_ = tools.NewMysqlInstance().Sync2(new(models.UserLoginRecord))

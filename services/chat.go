@@ -135,7 +135,9 @@ func (r *chatService) SaveChatRecord(node *constants.NodeConstant, message const
 	messageModel := models.ChatRecord{
 		UserId:    message.Userid,
 		TargetId:  message.TargetID,
-		Type:      message.Cmd,
+		Category:  message.Cmd,
+		Mime:      message.Media,
+		Url:       message.Url,
 		Remark:    "",
 		Content:   message.Content,
 		Created:   int(time.Now().Unix()),
@@ -151,25 +153,43 @@ func (r *chatService) SaveChatRecord(node *constants.NodeConstant, message const
 	}
 }
 
-func (r *chatService) GetChatRecordByUidAndTime(userID int64, startTime int) ([]models.ChatRecord, error) {
-	//messageModel := models.ChatRecord{
-	//	UserId:    message.Userid,
-	//	TargetId:  message.TargetID,
-	//	Type:      message.Cmd,
-	//	Remark:    "",
-	//	Content:   message.Content,
-	//	Created:   int(time.Now().Unix()),
-	//	Updated:   0,
-	//	CreatedIp: node.Conn.RemoteAddr().String(),
-	//	UpdatedIp: "",
-	//	Deleted:   0,
-	//}
-	//messageList := *[]constants.MessageConstant
+func (r *chatService) GetChatRecordByUidAndTimeAndMyFriend(userID int64, startTime int, friends []string) ([]models.ChatRecord, error) {
 	ChatRecordList := make([]models.ChatRecord, 0)
 	db := tools.NewMysqlInstance()
-	err := db.Where("user_id=?", userID).And("created>?", startTime).And("deleted=?", 0).Find(&ChatRecordList)
+	fid := tools.NewCommonUtil().Array2String(friends, ",")
+	err := db.Where("user_id=?", userID).
+		And("created>?", startTime).
+		And("target_id in(?)", fid).
+		And("deleted=?", 0).
+		Find(&ChatRecordList)
 	if err != nil {
 		return nil, err
 	}
 	return ChatRecordList, nil
+}
+
+func (r *chatService) GetChatRecordByTargetAndTimeAndMyFriend(targetID int64, startTime int, friends []string) ([]models.ChatRecord, error) {
+	ChatRecordList := make([]models.ChatRecord, 0)
+	fid := tools.NewCommonUtil().Array2String(friends, ",")
+	db := tools.NewMysqlInstance()
+
+	err := db.Where("target_id=?", targetID).
+		And("user_id in(?)", fid).
+		And("created>?", startTime).
+		And("deleted=?", 0).
+		Find(&ChatRecordList)
+	if err != nil {
+		return nil, err
+	}
+	return ChatRecordList, nil
+}
+
+func (r *chatService) GetMyFriends(UserID int64) ([]models.ChatContact, error) {
+	db := tools.NewMysqlInstance()
+	var chatModel []models.ChatContact
+	err := db.Where("user_id=?", UserID).And("type=?", constants.CONNECT_TYPE_USER).And("deleted=?", 0).Find(&chatModel)
+	if err != nil {
+		return nil, err
+	}
+	return chatModel, nil
 }
