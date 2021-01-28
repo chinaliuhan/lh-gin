@@ -8,7 +8,7 @@ type ChatRegisterRequest struct {
 	Password   string `json:"password" form:"password"  binding:"required,min=6,max=32"`
 	RePassword string `json:"rePassword" form:"rePassword"  binding:"required,min=6,max=32"`
 	Memo       string `json:"memo" form:"memo"  binding:"required,min=6,max=32"`
-	Avatar     string `json:"avatar" form:"avatar"  binding:"required,min=1,max=32"`
+	Avatar     string `json:"avatar" form:"avatar"  binding:"required"`
 	Sex        string `json:"sex" form:"sex"  binding:"required,min=1,max=32"`
 	Nickname   string `json:"nickname" form:"nickname"  binding:"required,min=2,max=32"`
 }
@@ -41,8 +41,8 @@ type ChatConnectSendRequest struct {
 type ChatCreateCommunity struct {
 	Name string `json:"name" form:"name"  binding:"required,min=1,max=32,alphanum"` //required 为必须
 	Type int    `json:"type" form:"type"  binding:"required,numeric"`
-	Memo string `json:"memo" form:"memo"  binding:"required,alphanum"`
-	Icon string `json:"icon" form:"icon"  binding:"uri|url|url_encoded"`
+	Memo string `json:"memo" form:"memo"  binding:"required"`
+	Icon string `json:"icon" form:"icon"  binding:"required"`
 }
 
 /**

@@ -36,7 +36,7 @@ func main() {
 	*/
 	viewsPath := tools.NewCommonUtil().Pwd() + "/public/views/**/*"
 	engine.LoadHTMLGlob(viewsPath)
-	engine.Use(middlewares.NewRequestMiddleware().AutoExecView)
+	//engine.Use(middlewares.NewRequestMiddleware().AutoExecView)
 
 	/**
 	自定义路由文件
@@ -69,8 +69,8 @@ func main() {
 	//为单个静态资源文件，绑定url
 	favicon := tools.NewCommonUtil().Pwd() + "/public/assets/images/favicon.ico"
 	engine.StaticFile("/favicon.ico", favicon)
-	indexHtml := tools.NewCommonUtil().Pwd() + "/public/static/login.html"
-	engine.StaticFile("/", indexHtml)
+	//indexHtml := tools.NewCommonUtil().Pwd() + "/public/static/login.html"
+	//engine.StaticFile("/", indexHtml)
 
 	/**
 	执行GIN

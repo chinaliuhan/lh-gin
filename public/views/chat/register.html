@@ -125,9 +125,11 @@
                             if (res.code != 0) {
                                 mui.toast(res.msg)
                             } else {
-                                userInfo(res.data)
-                                userId(res.data.id)
-                                location.href = "../chat/login.shtml"
+                                mui.toast("注册成功")
+                                return
+                                // userInfo(res.data)
+                                // userId(res.data.id)
+                                // location.href = "../chat/login.shtml"
                             }
 
                         })

@@ -42,9 +42,6 @@ func (r *chatController) RegisterAction(ctx *gin.Context) {
 		hashPassword []byte
 	)
 
-	var tmp = models.User{}
-	tmp.CreatedIp = ctx.ClientIP()
-	tmp.UpdatedIp = ctx.ClientIP()
 	paramsRequest := requests.ChatRegisterRequest{}
 	err = ctx.ShouldBind(&paramsRequest)
 	if err != nil {
@@ -52,6 +49,15 @@ func (r *chatController) RegisterAction(ctx *gin.Context) {
 		tools.NewResponse(ctx).JsonFailed("参数错误")
 		return
 	}
+	tmp := models.User{}
+	_, _ = tools.NewMysqlInstance().Where("mobile=? and deleted=0", paramsRequest.Mobile).Get(&tmp)
+	if tmp.Id > 0 {
+		tools.NewResponse(ctx).JsonFailed("手机号已被占用")
+		return
+	}
+
+	tmp.CreatedIp = ctx.ClientIP()
+	tmp.UpdatedIp = ctx.ClientIP()
 
 	tmp.Mobile = paramsRequest.Mobile
 	hashPassword, err = bcrypt.GenerateFromPassword([]byte(paramsRequest.Password), bcrypt.DefaultCost)
@@ -317,6 +323,30 @@ func (r *chatController) AddFriendAction(ctx *gin.Context) {
 	return
 }
 
+func (r *chatController) GetMyChatRecord(ctx *gin.Context) {
+	//登录判断
+	token, _ := tools.NewCookieUtil(ctx).Get(constants.JWT_TOKEN_KEY)
+	if token == "" {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+	jwtClaims := tools.NewJwtUtil().ParseToken(token)
+	userID := jwtClaims.UserID
+	if token == "" || userID <= 0 {
+		tools.NewResponse(ctx).JsonFailed(constants.GetApiMsg(constants.API_CODE_NOT_LOGIN))
+		return
+	}
+	recordList, err := services.NewChatService().GetChatRecordByUidAndTime(userID, 0)
+	if err != nil {
+		tools.NewResponse(ctx).JsonFailed("获取聊天记录失败")
+		return
+	}
+
+	//todo 数据未过滤
+	tools.NewResponse(ctx).JsonSuccess(recordList)
+	return
+}
+
 /**
 获取群
 */
@@ -344,6 +374,7 @@ func (r *chatController) GetCommunityListAction(ctx *gin.Context) {
 	coms := make([]models.ChatCommunity, 0)
 	if len(comIds) == 0 {
 		tools.NewResponse(ctx).JsonFailed("你没有加入群聊")
+		return
 	}
 	_ = tools.NewMysqlInstance().In("id", comIds).Find(&coms)
 
@@ -522,7 +553,7 @@ func (r *chatController) UploadAction(ctx *gin.Context) {
 	}
 
 	//fileName = file.Filename + tools.NewGenerate().GenerateUUID()
-	fileName = file.Filename
+	fileName = tools.NewGenerate().GenerateMd5(file.Filename)
 	//todo 暂时存储,后面会用云存储,可通过配置使用本地存储还是云存储
 	//save file
 	uploadPath := tools.NewCommonUtil().Pwd() + "/public/upload/" + fileName

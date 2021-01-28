@@ -11,6 +11,7 @@ import (
 	"lh-gin/tools"
 	"log"
 	"sync"
+	"time"
 )
 
 type chatService struct {
@@ -52,7 +53,7 @@ func (r *chatService) ReceiveProcess(node *constants.NodeConstant) {
 		fmt.Printf("[ws]recv<=%s\n", message)
 
 		//进一步处理接收到的消息,单一服务器情况下可以直接发送
-		r.Dispatch(message)
+		r.Dispatch(node, message)
 
 		//分布式情况下, 需要将消息广播到局域网,或者使用消息队列,或者使用NGINX中间件做分发
 		//boardMsg(data)
@@ -99,7 +100,7 @@ const (
 )
 
 //接收消息后的调度逻辑处理
-func (r *chatService) Dispatch(data []byte) {
+func (r *chatService) Dispatch(node *constants.NodeConstant, data []byte) {
 	//解析data 为message
 	message := constants.MessageConstant{}
 	err := json.Unmarshal(data, &message)
@@ -108,6 +109,10 @@ func (r *chatService) Dispatch(data []byte) {
 		log.Println(err.Error())
 		return
 	}
+
+	//保存聊天记录
+	go r.SaveChatRecord(node, message)
+
 	//根据cmd字段对逻辑进行处理
 	switch message.Cmd {
 	case CMD_SINGLE_MSG: //单聊
@@ -124,4 +129,47 @@ func (r *chatService) Dispatch(data []byte) {
 		//一般不用管
 		tools.NewLogUtil().Info("websocket 心跳: ", message.Id)
 	}
+}
+
+func (r *chatService) SaveChatRecord(node *constants.NodeConstant, message constants.MessageConstant) {
+	messageModel := models.ChatRecord{
+		UserId:    message.Userid,
+		TargetId:  message.TargetID,
+		Type:      message.Cmd,
+		Remark:    "",
+		Content:   message.Content,
+		Created:   int(time.Now().Unix()),
+		Updated:   0,
+		CreatedIp: node.Conn.RemoteAddr().String(),
+		UpdatedIp: "",
+		Deleted:   0,
+	}
+	db := tools.NewMysqlInstance()
+	_, err := db.InsertOne(messageModel)
+	if err != nil {
+		tools.NewLogUtil().Error("聊天记录入库失败:")
+	}
+}
+
+func (r *chatService) GetChatRecordByUidAndTime(userID int64, startTime int) ([]models.ChatRecord, error) {
+	//messageModel := models.ChatRecord{
+	//	UserId:    message.Userid,
+	//	TargetId:  message.TargetID,
+	//	Type:      message.Cmd,
+	//	Remark:    "",
+	//	Content:   message.Content,
+	//	Created:   int(time.Now().Unix()),
+	//	Updated:   0,
+	//	CreatedIp: node.Conn.RemoteAddr().String(),
+	//	UpdatedIp: "",
+	//	Deleted:   0,
+	//}
+	//messageList := *[]constants.MessageConstant
+	ChatRecordList := make([]models.ChatRecord, 0)
+	db := tools.NewMysqlInstance()
+	err := db.Where("user_id=?", userID).And("created>?", startTime).And("deleted=?", 0).Find(&ChatRecordList)
+	if err != nil {
+		return nil, err
+	}
+	return ChatRecordList, nil
 }

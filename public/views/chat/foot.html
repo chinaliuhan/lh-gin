@@ -101,6 +101,7 @@
                     showprocess: false,
                 },
                 created: function () {
+                    this.getChatRecord()
                     this.loadfriends();
                     this.loadcommunitys();
                     this.loaddoutures();
@@ -293,6 +294,17 @@
                             cb(userinfo)
                         }
                     },
+                    getChatRecord: function(){
+                        // post("chat/getMyChatRecord", "", function (res) {
+                        //     for (var i in res.data) {
+                        //         //todo 对象键名全部小写,兼容原来前端框架
+                        //         for (var key in res.data[i]) {
+                        //             res.data[i][key.toLowerCase()] = res.data[i][key]
+                        //         }
+                        //     }
+                        //     this.showmsg(userInfo(), res.data.in)
+                        // })
+                    },
                     onmessage: function (data) {
 
                         this.loaduserinfo(data.userid, function (user) {
@@ -429,7 +441,7 @@
                     quit: function () {
                         sessionStorage.removeItem("userid")
                         sessionStorage.removeItem("userinfo")
-                        location.href = "login.shtml"
+                        location.href = "/chat/login"
                     }
 
 

@@ -73,8 +73,11 @@ func ArticleRouters(engine *gin.Engine) *gin.RouterGroup {
 func ChatRouters(engine *gin.Engine) *gin.RouterGroup {
 	controllerHandler := controllers.NewChatController()
 	//注册 登录
+	engine.GET("/", controllerHandler.LoginAction)
 	engine.Any("/chat/register", controllerHandler.RegisterAction)
 	engine.Any("/chat/login", controllerHandler.LoginAction)
+	engine.POST("/chat/upload", controllerHandler.UploadAction)
+	engine.GET("/chat/index", controllerHandler.IndexAction)
 
 	//绑定路由
 	engineHandler := engine.Group("/chat/", middlewares.NewRequestMiddleware().JWTTokenVerify)
@@ -85,9 +88,9 @@ func ChatRouters(engine *gin.Engine) *gin.RouterGroup {
 		//登录
 		//engineHandler.Any("login", controllerHandler.LoginAction)
 		//上传
-		engineHandler.POST("upload", controllerHandler.UploadAction)
+		//engineHandler.POST("upload", controllerHandler.UploadAction)
 		//首页
-		engineHandler.GET("index", controllerHandler.IndexAction)
+		//engineHandler.GET("index", controllerHandler.IndexAction)
 		//获取好友列表
 		engineHandler.POST("getMyFriendList", controllerHandler.GetMyFriendListAction)
 		//添加好友
@@ -100,6 +103,8 @@ func ChatRouters(engine *gin.Engine) *gin.RouterGroup {
 		engineHandler.POST("joinCommunity", controllerHandler.JoinCommunityAction)
 		//聊天
 		engineHandler.Any("connectSend", controllerHandler.ConnectSendAction)
+		//聊天记录
+		engineHandler.Any("getMyChatRecord", controllerHandler.GetMyChatRecord)
 	}
 
 	return engineHandler

@@ -76,6 +76,31 @@ func NewMysqlInstance(params ...string) *mysqlInstance {
 	return instanceMap[section]
 }
 
+func (r *mysqlInstance) UnsetMysqlInstance(params ...string) {
+	//参数多的时候最好在顶层初始化
+	var (
+		section string
+	)
+	//模拟形参
+	if len(params) > 1 {
+		//仅指定了section filename
+		section = params[0]
+
+	} else {
+		if len(params) > 0 {
+			//仅仅指定了section
+			section = params[0]
+
+		} else {
+			//未指定任何参数,采用默认值
+			section = "mysql"
+		}
+	}
+
+	_ = instanceMap[section].Close()
+	instanceMap[section] = nil
+}
+
 type MysqlUtil struct {
 	sectionName string
 	fileName    string
