@@ -11,7 +11,8 @@
         }
 
         function userId() {
-            return parseInt(util.parseQuery("id"))
+            return userInfo().id
+            // return parseInt(util.parseQuery("id"))
         }
 
         var app = new Vue(
@@ -240,7 +241,6 @@
 
                     },
                     sendtxtmsg: function (txt) {
-                        console.log("########发送文本聊天信息: ", txt)
                         //{id:1,userid:2,targetid:3,cmd:10,media:1,content:"hello"}
                         var msg = this.createmsgcontext();
                         msg.media = 1;
@@ -301,9 +301,7 @@
                     getChatRecord: function(){
                         let that  =this;
                         let userinfo  = userInfo();
-                        console.log(userinfo)
                         post("chat/getMyChatRecord", "", function (res) {
-                            console.log(res);
                             for (let i in res.data) {
                                 let tmp = {};
                                 // tmp['userid'] = res.data[i].TargetId;
@@ -320,6 +318,9 @@
                     },
                     initwebsocket: function () {
                         var url = "ws://" + location.host + "/chat/connectSend"
+                        if (window.location.protocol === 'https:') {
+                            url = "wss://" + location.host + "/chat/connectSend"
+                        }
                         this.webSocket = new WebSocket(url);
                         //消息处理
                         this.webSocket.onmessage = function (evt) {
@@ -336,7 +337,7 @@
                             var timer = function () {
                                 if (evt.target.readyState === 1) {
                                     console.log("websocket状态正常,发送心跳信息")
-                                    evt.target.send("ping...")
+                                    evt.target.send("ping")
                                 } else {
                                     console.log("websocket状态有误,当前状态为: " + evt.target.readyState)
                                 }
@@ -361,7 +362,7 @@
                     },
                     loadfriends: function () {
                         var that = this;
-                        post("chat/getMyFriendList?token=" + util.parseQuery("token"), {userid: userId()}, function (res) {
+                        post("chat/getMyFriendList", {userid: userId()}, function (res) {
                             that.friends = res.data || [];
                             var usermap = this.usermap;
                             for (var i in res.data) {

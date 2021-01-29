@@ -50,7 +50,12 @@ func (r *chatService) ReceiveProcess(node *constants.NodeConstant) {
 			return
 		}
 
-		fmt.Printf("[ws]recv<=%s\n", message)
+		str := fmt.Sprintf("%s", message)
+		println("[ws]receive<=========================== ", str)
+		if str == "ping" {
+			_ = node.Conn.WriteMessage(websocket.TextMessage, []byte("pong"))
+			return
+		}
 
 		//进一步处理接收到的消息,单一服务器情况下可以直接发送
 		r.Dispatch(node, message)
@@ -81,6 +86,22 @@ var ClientMap map[int64]*constants.NodeConstant = make(map[int64]*constants.Node
 //读写锁
 var Rwlocker sync.RWMutex
 
+//连接健康检查
+func (r *chatService) CheckConnectHealth() {
+	for {
+		time.Sleep(time.Duration(10) * time.Second)
+		for k, v := range ClientMap {
+			err := v.Conn.WriteMessage(websocket.TextMessage, []byte("pong..."))
+			if err != nil {
+				_ = v.Conn.Close()
+				Rwlocker.Lock()
+				delete(ClientMap, k)
+				Rwlocker.Unlock()
+			}
+		}
+	}
+}
+
 //发送消息
 func (r *chatService) SendMsg(userId int64, msg []byte) {
 	//获取到信息就发送
@@ -89,7 +110,6 @@ func (r *chatService) SendMsg(userId int64, msg []byte) {
 	Rwlocker.Unlock()
 	if ok {
 		node.DataQueue <- msg
-
 	}
 }
 

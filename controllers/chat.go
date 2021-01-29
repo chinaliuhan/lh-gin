@@ -420,6 +420,12 @@ func (r *chatController) GetCommunityListAction(ctx *gin.Context) {
 */
 func (r *chatController) CreateCommunityAction(ctx *gin.Context) {
 
+	//非POST请求直接返回模板
+	if ctx.Request.Method != http.MethodPost {
+		ctx.HTML(http.StatusOK, "/chat/createCommunity.shtml", nil)
+		return
+	}
+
 	var (
 		err error
 	)
@@ -670,4 +676,7 @@ func (r *chatController) ConnectSendAction(ctx *gin.Context) {
 
 	//发送消息
 	services.NewChatService().SendMsg(userID, []byte("welcome connect"))
+
+	//连接健康检查
+	services.NewChatService().CheckConnectHealth()
 }

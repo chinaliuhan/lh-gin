@@ -58,8 +58,7 @@
                         for (i in res.data) {
                             res.data[i.toLowerCase()] = res.data[i]
                         }
-                        var url = "/chat/index?id="+res.data.id
-                                +"&token="+res.data.token
+                        var url = "/chat/index"
                         userInfo(res.data)
                         userId(res.data.id)
                         location.href= url

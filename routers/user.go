@@ -98,7 +98,7 @@ func ChatRouters(engine *gin.Engine) *gin.RouterGroup {
 		//获取群列表
 		engineHandler.POST("getCommunityList", controllerHandler.GetCommunityListAction)
 		//添加群
-		engineHandler.POST("createCommunity", controllerHandler.CreateCommunityAction)
+		engineHandler.Any("createCommunity", controllerHandler.CreateCommunityAction)
 		//加入群
 		engineHandler.POST("joinCommunity", controllerHandler.JoinCommunityAction)
 		//聊天
